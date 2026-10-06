@@ -6,8 +6,6 @@ import {
   Sparkles,
   Search,
   Home,
-  BookOpen,
-  Compass,
   Clock,
   FileText,
   Sun,
@@ -357,28 +355,6 @@ const StudentChat = () => {
           >
             <Home size={15} />
             <span>Home</span>
-          </button>
-
-          <button
-            className={`axora-nav-item ${activeTab === "regulations" ? "active" : ""}`}
-            onClick={() => {
-              setActiveTab("regulations");
-              handleSendMessage("What are the core academic regulations and attendance rules?");
-            }}
-          >
-            <BookOpen size={15} />
-            <span>Regulations</span>
-          </button>
-
-          <button
-            className={`axora-nav-item ${activeTab === "explore" ? "active" : ""}`}
-            onClick={() => {
-              setActiveTab("explore");
-              handleSendMessage("What documents are required for scholarship renewal and financial aid?");
-            }}
-          >
-            <Compass size={15} />
-            <span>Explore Sources</span>
           </button>
 
           <button
