@@ -1,34 +1,29 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import hackVideo from "../assets/hack.mp4";
+import { ArrowRight } from "lucide-react";
 
 const Hero = () => {
   const navigate = useNavigate();
 
   return (
     <section className="hero">
-
-          <div className="hero-video-wrapper">
-
-          <div className="hero-video-frame">
-
-            <video
-              src={hackVideo}
-              autoPlay
-              muted
-              loop
-              playsInline
-            />
-
-          </div>
-
+      <div className="hero-video-wrapper">
+        <div className="hero-video-frame">
+          <video
+            src={hackVideo}
+            autoPlay
+            muted
+            loop
+            playsInline
+          />
         </div>
+      </div>
 
       {/* Very subtle ambient glow */}
       <div className="hero-bg-glow"></div>
 
       <div className="hero-content">
-
         {/* Small top label */}
         <div className="hero-label">
           <span></span>
@@ -50,13 +45,12 @@ const Hero = () => {
 
         {/* Buttons */}
         <div className="hero-actions">
-
           <button
             className="hero-primary-btn"
             onClick={() => navigate("/login")}
           >
-            Get Started
-            <span>→</span>
+            <span>Get Started</span>
+            <ArrowRight size={14} />
           </button>
 
           <button
@@ -65,14 +59,8 @@ const Hero = () => {
           >
             Create Account
           </button>
-
         </div>
-
-        {/* VIDEO */}
-      
-
       </div>
-
     </section>
   );
 };
