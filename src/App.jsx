@@ -23,6 +23,7 @@ function App() {
 
         {/* Faculty Document Upload & Management Portal */}
         <Route path="/faculty-dashboard" element={<FacultyDashboard />} />
+        <Route path="/admin" element={<FacultyDashboard />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
