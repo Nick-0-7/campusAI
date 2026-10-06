@@ -11,8 +11,6 @@ import {
   FileText,
   Sun,
   Moon,
-  Paperclip,
-  FileCheck,
   Mic,
   Volume2,
   ArrowUp,
@@ -507,39 +505,18 @@ const StudentChat = () => {
                   {/* Input Card Bottom Toolbar */}
                   <div className="axora-input-toolbar">
                     <div className="axora-input-tools-left">
-                      <button
-                        type="button"
-                        className="axora-tool-icon-btn"
-                        title="Upload reference"
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          color: "var(--chat-text-muted)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                        }}
                       >
-                        <Paperclip size={14} />
-                      </button>
-
-                      <button
-                        type="button"
-                        className="axora-tool-chip"
-                        onClick={() =>
-                          handleSendMessage(
-                            "What is the minimum attendance required to appear for the semester examination?"
-                          )
-                        }
-                      >
-                        <FileCheck size={13} />
-                        <span>Citation Mode</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="axora-tool-chip"
-                        onClick={() =>
-                          handleSendMessage(
-                            "What documents are required for scholarship renewal?"
-                          )
-                        }
-                      >
-                        <Search size={13} />
-                        <span>Search Documents</span>
-                      </button>
+                        <ShieldCheck size={14} style={{ color: "#22c55e" }} />
+                        <span>Strict Institutional Citations</span>
+                      </span>
                     </div>
 
                     <div className="axora-input-tools-right">
@@ -767,13 +744,6 @@ const StudentChat = () => {
 
                   <div className="axora-input-toolbar">
                     <div className="axora-input-tools-left">
-                      <button
-                        type="button"
-                        className="axora-tool-icon-btn"
-                        title="Attach document"
-                      >
-                        <Paperclip size={14} />
-                      </button>
 
                       <span
                         style={{
