@@ -26,16 +26,16 @@ router.post(
   uploadDocument
 );
 
-router.post("/:id/reprocess", authenticate, requireRole("admin"), reprocessDocument);
+router.post("/:id/reprocess", authenticate, requireRole("admin", "faculty"), reprocessDocument);
 
 router.post(
   "/:id/versions",
   authenticate,
-  requireRole("admin"),
+  requireRole("admin", "faculty"),
   upload.single("file"),
   updateDocumentVersion
 );
 
-router.delete("/:id", authenticate, requireRole("admin"), deleteDocument);
+router.delete("/:id", authenticate, requireRole("admin", "faculty"), deleteDocument);
 
 module.exports = router;

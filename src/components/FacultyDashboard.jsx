@@ -265,7 +265,7 @@ const FacultyDashboard = () => {
         if (fileInputRef.current) fileInputRef.current.value = "";
         fetchDocumentsAndStats();
       } else {
-        setUploadError(response?.message || "Upload failed.");
+        setUploadError(response?.error || response?.message || "Upload failed.");
       }
     } catch (err) {
       console.warn("Upload offline fallback:", err);

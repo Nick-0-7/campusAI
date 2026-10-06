@@ -44,10 +44,20 @@ const StudentChat = () => {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [sessionId] = useState("session-" + Date.now());
+  const [sessionId, setSessionId] = useState(() => "session-" + Date.now());
   const [copiedId, setCopiedId] = useState(null);
   const [searchFilter, setSearchFilter] = useState("");
   const [activeTab, setActiveTab] = useState("home");
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Dynamic user query history
+  const [dynamicHistory, setDynamicHistory] = useState([
+    { id: "h1", query: "What is the minimum attendance requirement to appear for exams?" },
+    { id: "h2", query: "What documents are required for scholarship renewal?" },
+    { id: "h3", query: "Procedure for semester examination re-evaluation..." },
+    { id: "h4", query: "Campus placement drive eligibility and CGPA cutoff?" },
+  ]);
 
   // Apply theme to document root
   useEffect(() => {
@@ -67,38 +77,98 @@ const StudentChat = () => {
     return "Good Evening";
   };
 
-  // Pre-filled past conversations in the sidebar (mimicking Axora timeline)
+  // Reset conversation and create new session
+  const handleNewChat = () => {
+    if (isSpeaking && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+    setMessages([]);
+    setSessionId("session-" + Date.now());
+  };
+
+  // Web Speech API: Voice-to-Text
+  const toggleVoiceInput = () => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Voice speech recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge.");
+      return;
+    }
+
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => setIsListening(true);
+      recognition.onend = () => setIsListening(false);
+      recognition.onerror = () => setIsListening(false);
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          setInputText((prev) => (prev ? `${prev} ${transcript}` : transcript));
+        }
+      };
+
+      recognition.start();
+    } catch (e) {
+      console.warn("Speech recognition error:", e);
+      setIsListening(false);
+    }
+  };
+
+  // Text-to-Speech: Read Aloud
+  const toggleAudioSpeech = (customText) => {
+    if (!window.speechSynthesis) {
+      alert("Text-to-speech audio is not supported in this browser.");
+      return;
+    }
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    let textToSpeak = customText;
+    if (!textToSpeak) {
+      const lastBotMsg = [...messages].reverse().find((m) => m.sender === "assistant");
+      if (!lastBotMsg) return;
+      textToSpeak = lastBotMsg.text;
+    }
+
+    const cleanText = textToSpeak.replace(/[*#_`|]/g, " ");
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Grouped history dynamically derived from user queries
   const sidebarHistoryItems = [
     {
-      group: "Today",
-      items: [
-        {
-          id: "h1",
-          query: "What is the minimum attendance requirement to appear for exams?",
-        },
-        {
-          id: "h2",
-          query: "What documents are required for scholarship renewal?",
-        },
-        {
-          id: "h3",
-          query: "Procedure for semester examination re-evaluation...",
-        },
-      ],
+      group: "Recent Inquiries",
+      items: dynamicHistory,
     },
     {
-      group: "Previous 7 Days",
+      group: "Institutional Guidelines",
       items: [
         {
-          id: "h4",
-          query: "Campus placement drive eligibility and CGPA cutoff?",
-        },
-        {
-          id: "h5",
+          id: "fa1",
           query: "Hostel residency curfew and gate pass rules...",
         },
         {
-          id: "h6",
+          id: "fa2",
           query: "Central library book borrowing limits and fine policy...",
         },
       ],
@@ -180,6 +250,14 @@ const StudentChat = () => {
     setMessages((prev) => [...prev, newUserMessage]);
     setInputText("");
     setIsTyping(true);
+
+    // Track in sidebar dynamic history
+    setDynamicHistory((prev) => {
+      const filtered = prev.filter(
+        (item) => item.query.toLowerCase() !== text.toLowerCase()
+      );
+      return [{ id: "h-" + Date.now(), query: text }, ...filtered.slice(0, 9)];
+    });
 
     try {
       const response = await api.chat.sendQuery({
@@ -451,7 +529,7 @@ const StudentChat = () => {
             <button
               className="axora-icon-button"
               title="New Chat Session"
-              onClick={() => setMessages([])}
+              onClick={handleNewChat}
             >
               <Plus size={15} />
             </button>
@@ -522,16 +600,20 @@ const StudentChat = () => {
                     <div className="axora-input-tools-right">
                       <button
                         type="button"
-                        className="axora-tool-icon-btn"
-                        title="Voice Input"
+                        className={`axora-tool-icon-btn ${isListening ? "active pulse" : ""}`}
+                        title={isListening ? "Listening... Click to stop" : "Voice Input"}
+                        onClick={toggleVoiceInput}
+                        style={isListening ? { color: "#ef4444", background: "rgba(239, 68, 68, 0.15)" } : {}}
                       >
                         <Mic size={14} />
                       </button>
 
                       <button
                         type="button"
-                        className="axora-tool-icon-btn"
-                        title="Audio Mode"
+                        className={`axora-tool-icon-btn ${isSpeaking ? "active" : ""}`}
+                        title={isSpeaking ? "Stop Audio" : "Read Aloud"}
+                        onClick={() => toggleAudioSpeech()}
+                        style={isSpeaking ? { color: "#38bdf8", background: "rgba(56, 189, 248, 0.15)" } : {}}
                       >
                         <Volume2 size={14} />
                       </button>
@@ -642,6 +724,14 @@ const StudentChat = () => {
                                   <span>Copy</span>
                                 </>
                               )}
+                            </button>
+
+                            <button
+                              className="axora-action-btn"
+                              onClick={() => toggleAudioSpeech(msg.text)}
+                              title="Read response aloud"
+                            >
+                              <Volume2 size={12} />
                             </button>
 
                             <button
@@ -762,10 +852,22 @@ const StudentChat = () => {
                     <div className="axora-input-tools-right">
                       <button
                         type="button"
-                        className="axora-tool-icon-btn"
-                        title="Voice Input"
+                        className={`axora-tool-icon-btn ${isListening ? "active pulse" : ""}`}
+                        title={isListening ? "Listening... Click to stop" : "Voice Input"}
+                        onClick={toggleVoiceInput}
+                        style={isListening ? { color: "#ef4444", background: "rgba(239, 68, 68, 0.15)" } : {}}
                       >
                         <Mic size={14} />
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`axora-tool-icon-btn ${isSpeaking ? "active" : ""}`}
+                        title={isSpeaking ? "Stop Audio" : "Read Aloud"}
+                        onClick={() => toggleAudioSpeech()}
+                        style={isSpeaking ? { color: "#38bdf8", background: "rgba(56, 189, 248, 0.15)" } : {}}
+                      >
+                        <Volume2 size={14} />
                       </button>
 
                       <button

@@ -13,7 +13,8 @@ const DocumentSchema = new mongoose.Schema(
     },
     fileType: {
       type: String,
-      enum: ["pdf", "docx", "txt", "csv"],
+      lowercase: true,
+      trim: true,
       required: true,
     },
     fileSize: {
@@ -31,17 +32,8 @@ const DocumentSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: [
-        "Academic",
-        "Examination",
-        "Attendance",
-        "Scholarship",
-        "Placements",
-        "Hostel",
-        "Discipline",
-        "General",
-      ],
       default: "General",
+      trim: true,
     },
     currentVersion: {
       type: Number,
