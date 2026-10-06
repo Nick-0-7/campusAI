@@ -36,16 +36,21 @@ const Login = () => {
         role,
       });
 
-      if (response && response.success) {
-        localStorage.setItem("campusai_user", JSON.stringify(response.user));
+      if (response && (response.success || response.token)) {
+        const userObj = response.user || {
+          email: userData.email,
+          role,
+          name: userData.email.split("@")[0],
+        };
+        localStorage.setItem("campusai_user", JSON.stringify(userObj));
         if (response.token) {
           localStorage.setItem("campusai_token", response.token);
         }
 
-        if (response.user.role === "faculty") {
-          navigate("/faculty-dashboard", { state: { user: response.user } });
+        if (userObj.role === "faculty" || userObj.role === "admin") {
+          navigate("/faculty-dashboard", { state: { user: userObj } });
         } else {
-          navigate("/chat", { state: { user: response.user } });
+          navigate("/chat", { state: { user: userObj } });
         }
       } else {
         setError(
@@ -165,6 +170,51 @@ const Login = () => {
             )}
           </button>
         </form>
+
+        {/* DEMO ACCOUNTS HELPER */}
+        <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.08)", textAlign: "center" }}>
+          <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em", color: "#94a3b8", display: "block", marginBottom: "8px" }}>
+            ⚡ Fast Demo Autofill
+          </span>
+          <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+            <button
+              type="button"
+              onClick={() => {
+                setRole("student");
+                setUserData({ email: "student@campus.edu", password: "StudentPassword123!" });
+              }}
+              style={{
+                background: "rgba(85,92,224,0.12)",
+                border: "1px solid rgba(85,92,224,0.3)",
+                color: "#c7d2fe",
+                padding: "5px 10px",
+                borderRadius: "6px",
+                fontSize: "12px",
+                cursor: "pointer"
+              }}
+            >
+              🎓 Student Demo
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setRole("faculty");
+                setUserData({ email: "admin@campus.edu", password: "AdminPassword123!" });
+              }}
+              style={{
+                background: "rgba(16,185,129,0.12)",
+                border: "1px solid rgba(16,185,129,0.3)",
+                color: "#6ee7b7",
+                padding: "5px 10px",
+                borderRadius: "6px",
+                fontSize: "12px",
+                cursor: "pointer"
+              }}
+            >
+              🛡️ Faculty/Admin Demo
+            </button>
+          </div>
+        </div>
 
         <p className="login-footer">
           Don't have an account?{" "}
