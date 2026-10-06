@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import "../templates/login.css";
+import saarthiOrb from "../assets/saarthi-orb.svg";
 import { GraduationCap, Building2, ShieldCheck, Key, ArrowRight } from "lucide-react";
 
 const Register = () => {
@@ -84,9 +85,9 @@ const Register = () => {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-logo" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
-          <div className="logo-icon">S</div>
-          <span>Saarthi AI</span>
+        <div className="login-logo" onClick={() => navigate("/")} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "10px" }}>
+          <img src={saarthiOrb} alt="SaarthiAI" style={{ width: "28px", height: "28px", filter: "drop-shadow(0 0 8px rgba(79, 117, 255, 0.45))" }} />
+          <span style={{ fontSize: "20px", fontWeight: 700, letterSpacing: "-0.4px", color: "#ffffff" }}>SaarthiAI</span>
         </div>
 
         <h1>Create Account</h1>

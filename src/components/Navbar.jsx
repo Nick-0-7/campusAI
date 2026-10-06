@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "../templates/landing.css";
+import saarthiOrb from "../assets/saarthi-orb.svg";
 import { GraduationCap, Building2, LogOut } from "lucide-react";
 
 const Navbar = () => {
@@ -18,9 +19,11 @@ const Navbar = () => {
 
   return (
     <nav className="navbar">
-      <div className="navbar-logo" onClick={() => navigate("/")}>
-        <div className="logo-icon">S</div>
-        <span>Saarthi AI</span>
+      <div className="navbar-logo" onClick={() => navigate("/")} title="SaarthiAI Home">
+        <img src={saarthiOrb} alt="SaarthiAI" className="saarthi-orb-logo" />
+        <span style={{ color: "#ffffff", fontWeight: 700, fontSize: "19px", letterSpacing: "-0.4px" }}>
+          SaarthiAI
+        </span>
       </div>
 
       <div className="navbar-actions">

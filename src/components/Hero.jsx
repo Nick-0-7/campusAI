@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import Navbar from "./Navbar";
 import hackVideo from "../assets/hack.mp4";
 import { ArrowRight } from "lucide-react";
 
@@ -7,8 +8,10 @@ const Hero = () => {
   const navigate = useNavigate();
 
   return (
-    <section className="hero">
-      <div className="hero-video-wrapper">
+    <>
+      <Navbar />
+      <section className="hero">
+        <div className="hero-video-wrapper">
         <div className="hero-video-frame">
           <video
             src={hackVideo}
@@ -62,6 +65,7 @@ const Hero = () => {
         </div>
       </div>
     </section>
+    </>
   );
 };
 

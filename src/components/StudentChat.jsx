@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../services/api";
 import "../templates/chat.css";
+import saarthiOrb from "../assets/saarthi-orb.svg";
 import FormattedMessage from "./FormattedMessage";
 import {
   Sparkles,
@@ -505,11 +506,9 @@ const StudentChat = () => {
           ==================================================================== */}
       <aside className="axora-sidebar">
         {/* Brand */}
-        <div className="axora-brand" onClick={() => navigate("/")}>
-          <div className="axora-brand-icon">
-            <Sparkles size={18} />
-          </div>
-          <span className="axora-brand-text">Saarthi AI</span>
+        <div className="axora-brand" onClick={() => navigate("/")} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}>
+          <img src={saarthiOrb} alt="SaarthiAI" style={{ width: "26px", height: "26px", filter: "drop-shadow(0 0 8px rgba(79, 117, 255, 0.45))" }} />
+          <span className="axora-brand-text" style={{ fontSize: "16px", fontWeight: "700", letterSpacing: "-0.3px", color: "#ffffff" }}>SaarthiAI</span>
         </div>
 
         {/* Search Bar */}

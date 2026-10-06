@@ -69,17 +69,29 @@ button {
 .navbar-logo {
   display: flex;
   align-items: center;
-
-  gap: 9px;
-
-  color: #eeeeee;
-
-  font-size: 18px;
-  font-weight: 600;
-
+  gap: 10px;
+  color: #ffffff;
+  font-size: 19px;
+  font-weight: 700;
   letter-spacing: -0.4px;
-
   cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.navbar-logo:hover {
+  opacity: 0.92;
+}
+
+.saarthi-orb-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  filter: drop-shadow(0 0 10px rgba(79, 117, 255, 0.45));
+  transition: transform 0.25s ease;
+}
+
+.navbar-logo:hover .saarthi-orb-logo {
+  transform: scale(1.06);
 }
 
 .logo-icon {
