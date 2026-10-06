@@ -1,0 +1,520 @@
+/* =========================================
+   RESET
+========================================= */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  background: #000000;
+  color: #ffffff;
+
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  overflow-x: hidden;
+}
+
+button {
+  font-family: inherit;
+}
+
+
+/* =========================================
+   NAVBAR
+========================================= */
+
+.navbar {
+  position: fixed;
+
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 70px;
+
+  padding: 0 5%;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  z-index: 100;
+
+  background: rgba(0, 0, 0, 0.72);
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+
+/* Logo */
+
+.navbar-logo {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  color: #eeeeee;
+
+  font-size: 18px;
+  font-weight: 600;
+
+  letter-spacing: -0.4px;
+
+  cursor: pointer;
+}
+
+.logo-icon {
+  width: 30px;
+  height: 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
+
+  color: white;
+
+  background: #18191e;
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+
+/* Navbar buttons */
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+}
+
+.login-btn,
+.create-btn {
+  height: 36px;
+
+  padding: 0 16px;
+
+  border-radius: 8px;
+
+  font-size: 12px;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.login-btn {
+  color: #c8c8ce;
+
+  background: transparent;
+
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.login-btn:hover {
+  color: white;
+
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.create-btn {
+  color: white;
+
+  background: #18191f;
+
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.create-btn:hover {
+  background: #222329;
+}
+
+
+/* =========================================
+   HERO
+========================================= */
+
+.hero {
+  position: relative;
+
+  width: 100%;
+  min-height: 100vh;
+
+  padding-top: 70px;
+
+  overflow: hidden;
+
+  background: #000000;
+}
+
+
+/* =========================================
+   BACKGROUND
+========================================= */
+
+.hero-bg-glow {
+  position: absolute;
+
+  width: 700px;
+  height: 400px;
+
+  left: 50%;
+  top: 70px;
+
+  transform: translateX(-50%);
+
+  background: rgba(60, 60, 75, 0.08);
+
+  filter: blur(100px);
+
+  pointer-events: none;
+}
+
+
+/* =========================================
+   HERO CONTENT
+========================================= */
+
+.hero-content {
+  position: relative;
+
+  width: 100%;
+
+  max-width: 1200px;
+
+  margin: 0 auto;
+
+  padding: 70px 30px 100px;
+
+  text-align: center;
+
+  z-index: 2;
+}
+
+
+/* =========================================
+   LABEL
+========================================= */
+
+.hero-label {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  padding: 7px 13px;
+
+  margin-bottom: 28px;
+
+  border-radius: 7px;
+
+  color: #9b9ba3;
+
+  font-size: 11px;
+  font-weight: 500;
+
+  background: #0b0b0d;
+
+  border: 1px solid rgba(255, 255, 255, 0.075);
+}
+
+.hero-label span {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: #777cff;
+
+  box-shadow: 0 0 8px rgba(119, 124, 255, 0.6);
+}
+
+
+/* =========================================
+   TITLE
+========================================= */
+
+.hero-title {
+  max-width: 900px;
+
+  margin: auto;
+
+  color: #eeeeef;
+
+  font-size: clamp(45px, 5.5vw, 72px);
+
+  font-weight: 600;
+
+  line-height: 1.08;
+
+  letter-spacing: -3px;
+}
+
+.hero-title span {
+  color: #7e82ff;
+}
+
+
+/* =========================================
+   DESCRIPTION
+========================================= */
+
+.hero-description {
+  max-width: 610px;
+
+  margin: 25px auto 0;
+
+  color: #77777f;
+
+  font-size: 14px;
+
+  line-height: 1.7;
+
+  font-weight: 400;
+}
+
+
+/* =========================================
+   BUTTONS
+========================================= */
+
+.hero-actions {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 9px;
+
+  margin-top: 27px;
+}
+
+.hero-primary-btn,
+.hero-secondary-btn {
+  height: 40px;
+
+  padding: 0 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 9px;
+
+  border-radius: 8px;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+
+/* Primary */
+
+.hero-primary-btn {
+  color: white;
+
+  background: #555ce0;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hero-primary-btn:hover {
+  background: #6269ec;
+
+  transform: translateY(-1px);
+}
+
+.hero-primary-btn span {
+  font-size: 15px;
+}
+
+
+/* Secondary */
+
+.hero-secondary-btn {
+  color: #bcbcc3;
+
+  background: #0c0c0f;
+
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.hero-secondary-btn:hover {
+  color: white;
+
+  background: #131318;
+}
+
+
+/* =========================================
+   VIDEO
+========================================= */
+
+.hero-video-wrapper {
+  position: relative;
+
+  width: 100%;
+
+  max-width: 720px;
+
+  margin: 55px auto 0;
+}
+
+
+/* Soft shadow */
+
+.hero-video-wrapper::before {
+  content: "";
+
+  position: absolute;
+
+  width: 100px;
+  height: 100px;
+
+  left: 15%;
+  top: 25px;
+
+  background: rgba(50, 50, 65, 0.13);
+
+  filter: blur(60px);
+
+  z-index: -1;
+}
+
+
+/* Video frame */
+/* =========================================
+   TINY VIDEO
+========================================= */
+
+.hero-video-wrapper {
+  width: 100px;
+  height: 100px;
+
+  margin: 55px auto 0;
+
+  position: relative;
+}
+
+.hero-video-wrapper::before {
+  display: none;
+}
+
+.hero-video-frame {
+  width: 100px;
+  height: 100px;
+
+  overflow: hidden;
+
+  background: transparent;
+
+  border: 0;
+  border-radius: 0;
+
+  box-shadow: none;
+}
+
+.hero-video-frame video {
+  width: 100px;
+  height: 100px;
+
+  display: block;
+
+  object-fit: cover;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 768px) {
+
+  .navbar {
+    height: 64px;
+
+    padding: 0 18px;
+  }
+
+  .navbar-logo {
+    font-size: 16px;
+  }
+
+  .create-btn {
+    display: none;
+  }
+
+  .hero {
+    padding-top: 64px;
+  }
+
+  .hero-content {
+    padding: 55px 18px 70px;
+  }
+
+  .hero-title {
+    font-size: 42px;
+
+    letter-spacing: -2px;
+  }
+
+  .hero-description {
+    font-size: 13px;
+  }
+
+  .hero-video-wrapper {
+    margin-top: 45px;
+  }
+}
+
+
+@media (max-width: 480px) {
+
+  .hero-title {
+    font-size: 35px;
+
+    letter-spacing: -1.5px;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+  }
+
+  .hero-primary-btn,
+  .hero-secondary-btn {
+    width: 180px;
+  }
+
+  .hero-video-wrapper {
+    margin-top: 40px;
+  }
+}
