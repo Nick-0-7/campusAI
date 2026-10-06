@@ -21,6 +21,23 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // Static uploads directory
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
+// Root status route
+app.get("/", (req, res) => {
+  res.json({
+    status: "online",
+    message: "🚀 CampusAI Knowledge Copilot Backend is running successfully!",
+    version: "1.0.0",
+    endpoints: {
+      health: "/api/health",
+      auth: "/api/auth",
+      chat: "/api/chat",
+      documents: "/api/documents",
+      feedback: "/api/feedback",
+    },
+    database: "MongoDB Atlas Connected",
+  });
+});
+
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/documents", documentRoutes);
