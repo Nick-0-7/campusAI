@@ -1,4 +1,8 @@
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:5000/api"
+    : "/api");
 
 const getHeaders = (isFormData = false) => {
   const token = localStorage.getItem("campusai_token");
