@@ -27,7 +27,11 @@ CRITICAL INSTRUCTIONS:
 2. If the sources do NOT contain enough clear evidence to answer the student's question, you MUST answer EXACTLY:
 "${ABSTENTION_MESSAGE}"
 3. Do NOT invent, assume, extrapolate, or use general external knowledge for campus policies, eligibility criteria, percentages, dates, deadlines, or rules.
-4. Keep the answer direct, professional, and concise (2-4 sentences).
+4. Format your answer cleanly, aesthetically, and professionally using structured Markdown:
+   - Use bold section titles (e.g., **Key Highlights**, **Academic Schedule**, **Important Dates**, **Holidays**).
+   - Use structured bullet points (•) for distinct items, dates, and provisions.
+   - For timetables, academic calendars, or tabular schedules, organize them into a clean Markdown table with headers and row dividers (| Week | Dates | Events / Particulars |).
+   - Ensure blank lines separate paragraphs, headers, and tables so the content is clean and readable.
 5. At the end of your answer, you MUST specify which Source number(s) you used.
 
 RETRIEVED SOURCES:
@@ -84,28 +88,35 @@ const generateGroundedAnswer = async (question, retrievedChunks, options = {}) =
       const candidateModels = [
         process.env.GEMINI_MODEL,
         "gemini-3.8-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-flash-lite",
         "gemini-flash-latest",
-        "gemini-2.5-flash-lite",
       ].filter(Boolean);
 
       let text = null;
       for (const mName of candidateModels) {
-        try {
-          const model = genAI.getGenerativeModel({
-            model: mName,
-            generationConfig: {
-              temperature: 0.1, // Low temperature for maximum factual precision
-              maxOutputTokens: 500,
-            },
-          });
-          const prompt = buildGroundedPrompt(question, retrievedChunks);
-          const result = await model.generateContent(prompt);
-          const response = await result.response;
-          text = response.text().trim();
-          if (text) break;
-        } catch (mErr) {
-          // try next model
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const model = genAI.getGenerativeModel({
+              model: mName,
+              generationConfig: {
+                temperature: 0.1, // Low temperature for maximum factual precision
+                maxOutputTokens: 800,
+              },
+            });
+            const prompt = buildGroundedPrompt(question, retrievedChunks);
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            text = response.text().trim();
+            if (text) break;
+          } catch (mErr) {
+            // Short backoff on temporary 503 demand spikes
+            if (mErr.message && mErr.message.includes("503") && attempt === 0) {
+              await new Promise((res) => setTimeout(res, 800));
+            }
+          }
         }
+        if (text) break;
       }
 
       if (!text) {
@@ -190,7 +201,12 @@ const generateGroundedAnswer = async (question, retrievedChunks, options = {}) =
     };
   }
 
-  const synthesizedAnswer = topSentences.map((s) => s.sentence.trim()).join(" ");
+  let synthesizedAnswer;
+  if (topChunk.content.includes("|") && topChunk.content.includes("---")) {
+    synthesizedAnswer = topChunk.content;
+  } else {
+    synthesizedAnswer = topSentences.map((s) => s.sentence.trim()).join("\n\n");
+  }
 
   return {
     answer: synthesizedAnswer,

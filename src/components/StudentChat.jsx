@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../services/api";
 import "../templates/chat.css";
+import FormattedMessage from "./FormattedMessage";
 import {
   Sparkles,
   Search,
@@ -602,7 +603,9 @@ const StudentChat = () => {
                     )}
 
                     <div className="axora-msg-bubble">
-                      <div className="axora-msg-text">{msg.text}</div>
+                      <div className="axora-msg-text">
+                        <FormattedMessage content={msg.text} />
+                      </div>
 
                       {/* Supporting Institutional Citation Card */}
                       {msg.sender === "assistant" && (
