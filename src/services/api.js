@@ -84,17 +84,21 @@ export const api = {
     },
 
     getAll: async (params = {}) => {
-      const query = new URLSearchParams(params).toString();
-      const res = await fetch(`${API_BASE_URL}/documents${query ? `?${query}` : ""}`, {
-        method: "GET",
-        headers: getHeaders(),
-      });
-      const data = await res.json();
-      // Handle both array responses and { success, documents } responses
-      if (Array.isArray(data)) {
-        return { success: true, documents: data };
+      try {
+        const query = new URLSearchParams(params).toString();
+        const res = await fetch(`${API_BASE_URL}/documents${query ? `?${query}` : ""}`, {
+          method: "GET",
+          headers: getHeaders(),
+        });
+        const data = await res.json();
+        const docList = Array.isArray(data)
+          ? data
+          : (data.documents || data.data || []);
+        return { success: res.ok, documents: docList, count: docList.length };
+      } catch (err) {
+        console.warn("Error fetching documents:", err);
+        return { success: false, documents: [], error: err.message };
       }
-      return data;
     },
 
     getStats: async () => {

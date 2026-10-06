@@ -130,19 +130,26 @@ const FacultyDashboard = () => {
 
       if (
         docsRes.status === "fulfilled" &&
-        docsRes.value?.success &&
-        docsRes.value.documents.length > 0
+        docsRes.value?.documents &&
+        Array.isArray(docsRes.value.documents)
       ) {
-        setDocuments(docsRes.value.documents);
+        if (docsRes.value.documents.length > 0) {
+          setDocuments(docsRes.value.documents);
+        } else {
+          setDocuments([]);
+        }
       } else {
         setDocuments(defaultDocs);
       }
 
-      if (statsRes.status === "fulfilled" && statsRes.value?.success) {
+      if (statsRes.status === "fulfilled" && statsRes.value?.stats) {
         setStats(statsRes.value.stats);
       } else {
         setStats({
-          totalDocuments: 4,
+          totalDocuments:
+            docsRes.status === "fulfilled" && docsRes.value?.documents
+              ? docsRes.value.documents.length
+              : 4,
           indexingStatus: "Active & Synced",
         });
       }
@@ -251,10 +258,16 @@ const FacultyDashboard = () => {
 
     try {
       const response = await api.documents.upload(data);
-      if (response && response.success) {
+      if (response && (response.success || response.document)) {
         setUploadSuccess(
           `Document "${formData.title}" uploaded & successfully indexed into Knowledge Base!`
         );
+        if (response.document) {
+          setDocuments((prev) => {
+            const filtered = prev.filter((d) => d._id !== response.document._id);
+            return [response.document, ...filtered];
+          });
+        }
         setFormData({
           title: "",
           category: "Academic Regulations",

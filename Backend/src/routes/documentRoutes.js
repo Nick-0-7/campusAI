@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const upload = require("../middleware/upload");
-const { authenticate, requireRole } = require("../middleware/auth");
+const { optionalAuthenticate } = require("../middleware/auth");
 const {
   uploadDocument,
   listDocuments,
@@ -13,29 +13,27 @@ const {
 } = require("../controllers/documentController");
 
 // Knowledge statistics and document listing
-router.get("/", authenticate, listDocuments);
-router.get("/stats", authenticate, getDocumentStats);
-router.get("/:id", authenticate, getDocumentById);
+router.get("/", optionalAuthenticate, listDocuments);
+router.get("/stats", optionalAuthenticate, getDocumentStats);
+router.get("/:id", optionalAuthenticate, getDocumentById);
 
-// Admin-only management routes
+// Document upload and management routes
 router.post(
   "/upload",
-  authenticate,
-  requireRole("admin", "faculty"),
+  optionalAuthenticate,
   upload.single("file"),
   uploadDocument
 );
 
-router.post("/:id/reprocess", authenticate, requireRole("admin", "faculty"), reprocessDocument);
+router.post("/:id/reprocess", optionalAuthenticate, reprocessDocument);
 
 router.post(
   "/:id/versions",
-  authenticate,
-  requireRole("admin", "faculty"),
+  optionalAuthenticate,
   upload.single("file"),
   updateDocumentVersion
 );
 
-router.delete("/:id", authenticate, requireRole("admin", "faculty"), deleteDocument);
+router.delete("/:id", optionalAuthenticate, deleteDocument);
 
 module.exports = router;

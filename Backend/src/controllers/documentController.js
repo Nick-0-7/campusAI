@@ -71,12 +71,13 @@ const uploadDocument = async (req, res) => {
     });
 
     return res.status(202).json({
+      success: true,
       message: "Document uploaded successfully and queued for RAG indexing",
       document: doc,
     });
   } catch (err) {
     console.error("[Upload Document Error]", err);
-    return res.status(500).json({ message: "Upload failed", error: err.message });
+    return res.status(500).json({ success: false, message: "Upload failed", error: err.message });
   }
 };
 
@@ -160,9 +161,13 @@ const listDocuments = async (req, res) => {
       .populate("uploadedBy", "name email")
       .sort({ createdAt: -1 });
 
-    return res.json({ documents: docs });
+    return res.json({
+      success: true,
+      count: docs.length,
+      documents: docs,
+    });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -257,9 +262,9 @@ const deleteDocument = async (req, res) => {
       ip: req.ip,
     });
 
-    return res.json({ message: "Document and indexed knowledge deleted" });
+    return res.json({ success: true, message: "Document and indexed knowledge deleted" });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
