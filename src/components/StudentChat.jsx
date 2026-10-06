@@ -364,17 +364,6 @@ const StudentChat = () => {
             <Clock size={15} />
             <span>History</span>
           </button>
-
-          <button
-            className={`axora-nav-item ${activeTab === "circulars" ? "active" : ""}`}
-            onClick={() => {
-              setActiveTab("circulars");
-              handleSendMessage("What are the latest examination guidelines and re-evaluation procedures?");
-            }}
-          >
-            <FileText size={15} />
-            <span>Circulars</span>
-          </button>
         </div>
 
         {/* Grouped Chat History Timeline */}
