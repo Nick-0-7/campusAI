@@ -259,7 +259,8 @@ export const api = {
         headers: getHeaders(),
         body: JSON.stringify({
           messageId: chatId,
-          rating: feedback === "up" ? "helpful" : "inaccurate",
+          chatId,
+          rating: feedback === "up" ? "positive" : "negative",
         }),
       });
       return res.json();

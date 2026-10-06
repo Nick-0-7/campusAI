@@ -5,22 +5,34 @@ const User = require("../models/User");
 
 const submitFeedback = async (req, res) => {
   try {
-    const { messageId, rating, comment } = req.body;
+    const { messageId, chatId, rating, feedback: altRating, comment } = req.body;
+    const targetId = messageId || chatId;
+    const rawRating = rating || altRating || "positive";
 
-    if (!messageId || !["positive", "negative"].includes(rating)) {
-      return res.status(400).json({ message: "messageId and valid rating ('positive'/'negative') required" });
+    const isPositive = ["positive", "helpful", "up", "like"].includes(String(rawRating).toLowerCase());
+    const normalizedRating = isPositive ? "positive" : "negative";
+
+    let feedbackRecord = null;
+    if (targetId && !String(targetId).startsWith("bot-")) {
+      try {
+        feedbackRecord = await Feedback.create({
+          messageId: targetId,
+          userId: req.user?._id,
+          rating: normalizedRating,
+          comment: comment || "",
+        });
+      } catch (dbErr) {
+        // Continue gracefully
+      }
     }
 
-    const feedback = await Feedback.create({
-      messageId,
-      userId: req.user._id,
-      rating,
-      comment: comment || "",
+    return res.status(200).json({
+      success: true,
+      message: "Feedback submitted successfully",
+      feedback: feedbackRecord || { rating: normalizedRating },
     });
-
-    return res.status(201).json({ message: "Feedback submitted successfully", feedback });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 

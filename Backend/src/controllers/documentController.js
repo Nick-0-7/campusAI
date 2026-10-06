@@ -282,10 +282,39 @@ const reprocessDocument = async (req, res) => {
   }
 };
 
+/**
+ * Get aggregate metrics for knowledge base dashboard
+ */
+const getDocumentStats = async (req, res) => {
+  try {
+    const totalDocuments = await Document.countDocuments();
+    const categories = await Document.distinct("category");
+    const departments = await Document.distinct("department");
+    const fileTypes = await Document.distinct("fileType");
+    const totalChunks = await DocumentChunk.countDocuments();
+    const processingCount = await Document.countDocuments({ status: "processing" });
+
+    return res.json({
+      success: true,
+      stats: {
+        totalDocuments,
+        totalChunks,
+        categories: categories.filter(Boolean),
+        departments: departments.filter(Boolean),
+        fileTypes: fileTypes.filter(Boolean),
+        indexingStatus: processingCount > 0 ? "Indexing in progress" : "Active & Synced",
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   uploadDocument,
   listDocuments,
   getDocumentById,
+  getDocumentStats,
   updateDocumentVersion,
   deleteDocument,
   reprocessDocument,

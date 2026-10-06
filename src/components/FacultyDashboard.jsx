@@ -327,11 +327,15 @@ const FacultyDashboard = () => {
   const filteredDocuments = documents.filter((doc) => {
     const matchesCategory =
       selectedCategory === "All" || doc.category === selectedCategory;
+    const title = (doc.title || "").toLowerCase();
+    const fileName = (doc.originalName || doc.fileName || "").toLowerCase();
+    const department = (doc.department || "").toLowerCase();
+    const query = searchQuery.toLowerCase();
+
     const matchesSearch =
-      doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.originalName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (doc.department &&
-        doc.department.toLowerCase().includes(searchQuery.toLowerCase()));
+      title.includes(query) ||
+      fileName.includes(query) ||
+      department.includes(query);
     return matchesCategory && matchesSearch;
   });
 
@@ -671,7 +675,7 @@ const FacultyDashboard = () => {
                             <div className="doc-name-group">
                               <div className="doc-main-name">{doc.title}</div>
                               <div className="doc-filename">
-                                {doc.originalName} • By {doc.uploaderName || "Faculty"}
+                                {doc.fileName || doc.originalName} • By {doc.uploaderName || doc.uploadedBy?.name || "Faculty"}
                               </div>
                             </div>
                           </div>

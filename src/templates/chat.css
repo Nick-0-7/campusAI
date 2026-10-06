@@ -1033,3 +1033,53 @@
   border-radius: 0 6px 6px 0;
   color: #cbd5e1;
 }
+
+/* Light Mode Overrides for Formatted Elements */
+[data-theme="light"] .formatted-markdown-body strong,
+[data-theme="light"] .formatted-markdown-body h1,
+[data-theme="light"] .formatted-markdown-body h2,
+[data-theme="light"] .formatted-markdown-body h3,
+[data-theme="light"] .formatted-markdown-body h4 {
+  color: #0e1017;
+}
+
+[data-theme="light"] .formatted-markdown-body table {
+  background: #ffffff;
+  border-color: #e2e4ed;
+}
+
+[data-theme="light"] .formatted-markdown-body thead {
+  background: rgba(85, 92, 224, 0.09);
+}
+
+[data-theme="light"] .formatted-markdown-body th {
+  color: #484ec7;
+  border-bottom-color: #e2e4ed;
+  border-right-color: #eaebf2;
+}
+
+[data-theme="light"] .formatted-markdown-body td {
+  color: #12141c;
+  border-bottom-color: #eaebf2;
+  border-right-color: #eaebf2;
+}
+
+[data-theme="light"] .formatted-markdown-body tr:nth-child(even) td {
+  background: #f8f9fd;
+}
+
+[data-theme="light"] .formatted-markdown-body tr:hover td {
+  background: rgba(85, 92, 224, 0.06);
+}
+
+[data-theme="light"] .formatted-markdown-body code {
+  background: #eef1f8;
+  color: #0284c7;
+  border-color: #dbe0ee;
+}
+
+[data-theme="light"] .formatted-markdown-body blockquote {
+  background: rgba(85, 92, 224, 0.06);
+  color: #334155;
+}
+

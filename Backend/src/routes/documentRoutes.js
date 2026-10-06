@@ -6,13 +6,15 @@ const {
   uploadDocument,
   listDocuments,
   getDocumentById,
+  getDocumentStats,
   updateDocumentVersion,
   deleteDocument,
   reprocessDocument,
 } = require("../controllers/documentController");
 
-// Public/student-facing list of documents
+// Knowledge statistics and document listing
 router.get("/", authenticate, listDocuments);
+router.get("/stats", authenticate, getDocumentStats);
 router.get("/:id", authenticate, getDocumentById);
 
 // Admin-only management routes
