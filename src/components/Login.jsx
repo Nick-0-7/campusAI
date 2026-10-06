@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
-import "../templates/login.css";
 import { GraduationCap, Building2, ArrowRight } from "lucide-react";
+import "../templates/login.css";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -60,14 +60,14 @@ const Login = () => {
     } catch (err) {
       console.warn("Backend connection error:", err);
       const fallbackUser = {
-        name: userData.email.split("@")[0] || (role === "faculty" ? "Faculty Member" : "Student"),
+        name: userData.email.split("@")[0] || (role === "admin" ? "Administrator" : role === "faculty" ? "Faculty Member" : "Student"),
         email: userData.email,
         role: role,
-        department: role === "faculty" ? "Computer Science" : "Undergraduate",
+        department: role === "admin" ? "IT / Administration" : role === "faculty" ? "Computer Science" : "Undergraduate",
       };
       localStorage.setItem("campusai_user", JSON.stringify(fallbackUser));
       
-      if (role === "faculty") {
+      if (role === "faculty" || role === "admin") {
         navigate("/faculty-dashboard", { state: { user: fallbackUser } });
       } else {
         navigate("/chat", { state: { user: fallbackUser } });
@@ -81,8 +81,8 @@ const Login = () => {
     <div className="login-page">
       <div className="login-card">
         <div className="login-logo" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
-          <div className="logo-icon">C</div>
-          <span>CampusAI</span>
+          <div className="logo-icon">S</div>
+          <span>Saarthi AI</span>
         </div>
 
         <h1>Welcome back</h1>

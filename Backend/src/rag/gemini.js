@@ -87,10 +87,9 @@ const generateGroundedAnswer = async (question, retrievedChunks, options = {}) =
       const genAI = new GoogleGenerativeAI(apiKey.trim());
       const candidateModels = [
         process.env.GEMINI_MODEL,
-        "gemini-3.8-flash",
         "gemini-3.5-flash-lite",
-        "gemini-3.1-flash-lite",
-        "gemini-flash-latest",
+        "gemini-flash-lite-latest",
+        "gemini-3.5-flash",
       ].filter(Boolean);
 
       let text = null;
@@ -101,7 +100,7 @@ const generateGroundedAnswer = async (question, retrievedChunks, options = {}) =
               model: mName,
               generationConfig: {
                 temperature: 0.1, // Low temperature for maximum factual precision
-                maxOutputTokens: 800,
+                maxOutputTokens: 2000,
               },
             });
             const prompt = buildGroundedPrompt(question, retrievedChunks);
@@ -151,8 +150,7 @@ const generateGroundedAnswer = async (question, retrievedChunks, options = {}) =
     }
   }
 
-  // 2. Extractive Grounded Fallback (Guarantees zero hallucinations & preserves offline functionality)
-  const topChunk = retrievedChunks[0];
+  // 2. Extractive Grounded Fallback across all retrieved chunks
   const STOPWORDS = new Set([
     "what", "is", "the", "for", "rule", "policy", "does", "not", "exist", "tell",
     "me", "about", "a", "an", "of", "in", "to", "and", "or", "it", "this",
@@ -174,24 +172,32 @@ const generateGroundedAnswer = async (question, retrievedChunks, options = {}) =
     return word;
   }
 
-  const sentences = topChunk.content
-    .split(/(?<!\bRs|\bDr|\bProf|\bMr|\bMs|\bGovt|\bSr|\bNo|\bvs|\bviz|\b[A-Z])[.?!]\s+|\n+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 10 && !s.startsWith("--- PAGE"));
+  const allSentences = [];
+  for (const chunk of retrievedChunks) {
+    const rawSentences = (chunk.content || "")
+      .split(/(?<!\bRs|\bDr|\bProf|\bMr|\bMs|\bGovt|\bSr|\bNo|\bvs|\bviz|\b[A-Z])[.?!]\s+|\n+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 15 && !s.startsWith("--- PAGE") && !s.startsWith("| ---"));
 
-  const scoredSentences = sentences.map((s) => {
-    const sLower = s.toLowerCase();
-    const hits = salientWords.filter((w) => {
-      const stemmed = stemSimple(w);
-      return sLower.includes(w) || sLower.includes(stemmed);
-    }).length;
-    return { sentence: s, hits };
-  });
+    for (const s of rawSentences) {
+      const sLower = s.toLowerCase();
+      const hits = salientWords.filter((w) => {
+        const stemmed = stemSimple(w);
+        return sLower.includes(w) || sLower.includes(stemmed);
+      }).length;
+      if (hits > 0) {
+        allSentences.push({
+          sentence: s,
+          hits,
+        });
+      }
+    }
+  }
 
-  scoredSentences.sort((a, b) => b.hits - a.hits);
-  const topSentences = scoredSentences.filter((s) => s.hits > 0).slice(0, 3);
+  allSentences.sort((a, b) => b.hits - a.hits);
+  const topSentences = allSentences.slice(0, 4);
 
-  if (topSentences.length === 0 || (salientWords.length > 0 && scoredSentences[0].hits === 0)) {
+  if (topSentences.length === 0) {
     return {
       answer: ABSTENTION_MESSAGE,
       sources: [],
@@ -201,12 +207,9 @@ const generateGroundedAnswer = async (question, retrievedChunks, options = {}) =
     };
   }
 
-  let synthesizedAnswer;
-  if (topChunk.content.includes("|") && topChunk.content.includes("---")) {
-    synthesizedAnswer = topChunk.content;
-  } else {
-    synthesizedAnswer = topSentences.map((s) => s.sentence.trim()).join("\n\n");
-  }
+  const synthesizedAnswer = topSentences
+    .map((s) => s.sentence.trim())
+    .join("\n\n");
 
   return {
     answer: synthesizedAnswer,

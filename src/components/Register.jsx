@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import "../templates/login.css";
-import { GraduationCap, Building2, ArrowRight } from "lucide-react";
+import { GraduationCap, Building2, ShieldCheck, Key, ArrowRight } from "lucide-react";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -19,6 +19,7 @@ const Register = () => {
     confirmPassword: "",
     rollNo: "",
     department: "",
+    accessToken: "",
   });
 
   const handleChange = (e) => {
@@ -44,6 +45,11 @@ const Register = () => {
       return;
     }
 
+    if (role === "faculty" && !userData.accessToken.trim()) {
+      setError("Faculty Access Token is required to create a Faculty account.");
+      return;
+    }
+
     setLoading(true);
 
     const payload = {
@@ -52,13 +58,14 @@ const Register = () => {
       password: userData.password,
       role,
       rollNo: role === "student" ? userData.rollNo : "",
-      department: userData.department || (role === "faculty" ? "General Faculty" : "General"),
+      department: userData.department || (role === "student" ? "General" : "Academic Department"),
+      accessToken: role === "faculty" ? userData.accessToken.trim() : undefined,
     };
 
     try {
       const response = await api.auth.register(payload);
 
-      if (response && response.success) {
+      if (response && (response.success || response.token)) {
         setSuccessMsg("Account registered successfully! Redirecting to login...");
         setTimeout(() => {
           navigate("/login");
@@ -68,10 +75,7 @@ const Register = () => {
       }
     } catch (err) {
       console.warn("Backend registration error:", err);
-      setSuccessMsg("Account created! Redirecting to login...");
-      setTimeout(() => {
-        navigate("/login");
-      }, 1000);
+      setError(err?.message || "Failed to register account. Please check credentials or token.");
     } finally {
       setLoading(false);
     }
@@ -81,8 +85,8 @@ const Register = () => {
     <div className="login-page">
       <div className="login-card">
         <div className="login-logo" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
-          <div className="logo-icon">C</div>
-          <span>CampusAI</span>
+          <div className="logo-icon">S</div>
+          <span>Saarthi AI</span>
         </div>
 
         <h1>Create Account</h1>
@@ -91,7 +95,7 @@ const Register = () => {
           Join your campus knowledge assistant
         </p>
 
-        {/* ROLE SELECTOR */}
+        {/* ROLE SELECTOR: Student or Faculty only */}
         <div className="role-selector">
           <button
             type="button"
@@ -149,6 +153,31 @@ const Register = () => {
         )}
 
         <form onSubmit={handleRegister}>
+          {role === "faculty" && (
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ color: "#a5b4fc", display: "flex", alignItems: "center", gap: "6px" }}>
+                <Key size={14} />
+                <span>Faculty Access Token *</span>
+              </label>
+              <input
+                type="password"
+                name="accessToken"
+                placeholder="Enter institutional faculty access token..."
+                value={userData.accessToken}
+                onChange={handleChange}
+                required
+                style={{
+                  borderColor: "#6366f1",
+                  backgroundColor: "rgba(99, 102, 241, 0.08)",
+                  marginBottom: "8px",
+                }}
+              />
+              <p style={{ margin: "0 0 10px", fontSize: "12px", color: "#818cf8", lineHeight: 1.4 }}>
+                🔒 Restricted: A valid institutional access token is required to create a Faculty account.
+              </p>
+            </div>
+          )}
+
           <label>
             {role === "student" ? "Student Full Name" : "Faculty Name & Title"}
           </label>
@@ -163,7 +192,7 @@ const Register = () => {
             required
           />
 
-          <label>College Email</label>
+          <label>Institutional Email</label>
           <input
             type="email"
             name="email"
@@ -226,7 +255,9 @@ const Register = () => {
               "Creating Account..."
             ) : (
               <>
-                <span>Create {role === "student" ? "Student" : "Faculty"} Account</span>
+                <span>
+                  Create {role === "student" ? "Student" : "Faculty"} Account
+                </span>
                 <ArrowRight size={16} />
               </>
             )}

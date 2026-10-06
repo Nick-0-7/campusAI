@@ -1083,3 +1083,354 @@
   color: #334155;
 }
 
+/* ==========================================================================
+   CONVERSATION HISTORY VIEW & CLEAR OPTION STYLES
+   ========================================================================== */
+.axora-sidebar-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 8px 6px;
+}
+
+.axora-sidebar-history-head .axora-timeline-header {
+  margin: 0;
+}
+
+.axora-sidebar-clear-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  opacity: 0.8;
+}
+
+.axora-sidebar-clear-btn:hover {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.axora-history-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 36px 40px;
+  max-width: 1040px;
+  margin: 0 auto;
+  width: 100%;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.axora-history-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--chat-border-main);
+  flex-wrap: wrap;
+}
+
+.axora-history-header-left {
+  flex: 1;
+  min-width: 250px;
+}
+
+.axora-history-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.axora-history-title-row h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--chat-text-heading);
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.axora-history-icon {
+  color: var(--chat-accent);
+}
+
+.axora-history-count-badge {
+  background: var(--chat-bg-chip);
+  border: 1px solid var(--chat-border-chip);
+  color: var(--chat-text-secondary);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.axora-history-subtitle {
+  font-size: 13.5px;
+  color: var(--chat-text-secondary);
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+
+.axora-history-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.axora-clear-history-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.axora-clear-history-btn:hover {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.45);
+  transform: translateY(-1px);
+}
+
+.axora-new-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffffff;
+  background: var(--chat-accent);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.axora-new-chat-btn:hover {
+  background: var(--chat-accent-hover);
+  box-shadow: 0 4px 14px var(--chat-accent-glow);
+  transform: translateY(-1px);
+}
+
+.axora-history-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--chat-bg-surface);
+  border: 1px solid var(--chat-border-main);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 24px;
+  color: var(--chat-text-muted);
+  transition: border-color 0.2s ease;
+}
+
+.axora-history-search-bar:focus-within {
+  border-color: var(--chat-border-focus);
+}
+
+.axora-history-search-bar input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--chat-text-primary);
+  font-size: 14px;
+}
+
+.axora-history-search-bar input::placeholder {
+  color: var(--chat-text-muted);
+}
+
+.axora-history-search-clear {
+  background: transparent;
+  border: none;
+  color: var(--chat-text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.axora-history-search-clear:hover {
+  color: var(--chat-text-primary);
+}
+
+.axora-history-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.axora-history-card {
+  background: var(--chat-bg-surface);
+  border: 1px solid var(--chat-border-main);
+  border-radius: 12px;
+  padding: 18px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 150px;
+  position: relative;
+}
+
+.axora-history-card:hover {
+  border-color: var(--chat-border-focus);
+  background: var(--chat-bg-surface-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+}
+
+.axora-history-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.axora-history-card-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--chat-text-muted);
+  background: var(--chat-bg-chip);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.axora-history-delete-single-btn {
+  background: transparent;
+  border: none;
+  color: var(--chat-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.axora-history-delete-single-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.axora-history-card-query {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--chat-text-heading);
+  line-height: 1.45;
+  margin: 0 0 10px;
+}
+
+.axora-history-card-preview {
+  font-size: 12.5px;
+  color: var(--chat-text-secondary);
+  line-height: 1.5;
+  margin: 0 0 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.axora-history-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  border-top: 1px solid var(--chat-border-subtle);
+  padding-top: 10px;
+  margin-top: auto;
+}
+
+.axora-history-card-open-prompt {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--chat-accent);
+  transition: gap 0.15s ease;
+}
+
+.axora-history-card:hover .axora-history-card-open-prompt {
+  gap: 8px;
+}
+
+.axora-history-empty-state {
+  text-align: center;
+  padding: 70px 20px;
+  background: var(--chat-bg-surface);
+  border: 1px dashed var(--chat-border-main);
+  border-radius: 16px;
+  margin-top: 20px;
+}
+
+.axora-history-empty-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(85, 92, 224, 0.1);
+  color: var(--chat-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 18px;
+}
+
+.axora-history-empty-state h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--chat-text-heading);
+  margin: 0 0 8px;
+}
+
+.axora-history-empty-state p {
+  font-size: 13.5px;
+  color: var(--chat-text-secondary);
+  max-width: 440px;
+  margin: 0 auto 22px;
+  line-height: 1.5;
+}
+
+.axora-history-start-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--chat-accent);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.axora-history-start-btn:hover {
+  background: var(--chat-accent-hover);
+  box-shadow: 0 4px 14px var(--chat-accent-glow);
+  transform: translateY(-1px);
+}
+

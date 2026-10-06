@@ -25,7 +25,7 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.get("/", (req, res) => {
   res.json({
     status: "online",
-    message: "🚀 CampusAI Knowledge Copilot Backend is running successfully!",
+    message: "🚀 Saarthi AI Knowledge Copilot Backend is running successfully!",
     version: "1.0.0",
     endpoints: {
       health: "/api/health",
@@ -48,7 +48,7 @@ app.use("/api/feedback", feedbackRoutes);
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
-    service: "CampusAI Knowledge Copilot",
+    service: "Saarthi AI Knowledge Copilot",
     geminiConfigured: !!(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 10),
     timestamp: new Date().toISOString(),
   });
@@ -100,7 +100,7 @@ connectDB().then(async () => {
   await seedDefaultAccounts();
   app.listen(PORT, () => {
     console.log(`===============================================`);
-    console.log(`🚀 CampusAI Backend running on port ${PORT}`);
+    console.log(`🚀 Saarthi AI Backend running on port ${PORT}`);
     console.log(`📡 Health Check: http://localhost:${PORT}/api/health`);
     console.log(`===============================================`);
   });

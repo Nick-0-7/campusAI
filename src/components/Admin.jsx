@@ -167,8 +167,8 @@ const Admin = () => {
       {/* Header */}
       <header className="admin-header">
         <div className="admin-logo" onClick={() => navigate("/")}>
-          <div className="logo-icon">C</div>
-          <span>CampusAI</span>
+          <div className="logo-icon">S</div>
+          <span>Saarthi AI</span>
           <span className="admin-badge">Admin Knowledge Hub</span>
         </div>
 

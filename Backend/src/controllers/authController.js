@@ -12,18 +12,39 @@ const createToken = (user) => {
 
 const register = async (req, res) => {
   try {
-    const { name, email, password, role, rollNo, department } = req.body;
+    const { name, email, password, role, rollNo, department, accessToken, facultyToken, adminToken } = req.body;
+    const providedToken = accessToken || facultyToken || adminToken;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email, and password are required" });
+      return res.status(400).json({ success: false, message: "Name, email, and password are required" });
+    }
+
+    const requestedRole = (role || "student").toLowerCase().trim();
+    let assignedRole = "student";
+
+    // Strict security check: Faculty and Admin accounts require the valid access token
+    if (requestedRole === "faculty" || requestedRole === "admin") {
+      const requiredToken =
+        process.env.FACULTY_ACCESS_TOKEN ||
+        process.env.ADMIN_ACCESS_TOKEN ||
+        "CAMPUS_AI_ADMIN_SECURE_2026_KEY";
+
+      if (!providedToken || providedToken.trim() !== requiredToken.trim()) {
+        return res.status(403).json({
+          success: false,
+          message:
+            "Invalid or missing Access Token. Only authorized faculty and staff with the correct institutional token can create a Faculty account.",
+        });
+      }
+      assignedRole = requestedRole === "admin" ? "admin" : "faculty";
+    } else {
+      assignedRole = "student";
     }
 
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) {
-      return res.status(409).json({ message: "An account with this email already exists" });
+      return res.status(409).json({ success: false, message: "An account with this email already exists" });
     }
-
-    const assignedRole = ["student", "faculty", "admin"].includes(role) ? role : "student";
 
     const user = new User({
       name,
@@ -31,7 +52,7 @@ const register = async (req, res) => {
       password,
       role: assignedRole,
       rollNo: assignedRole === "student" ? rollNo : undefined,
-      department: assignedRole === "faculty" ? department : undefined,
+      department: assignedRole === "faculty" || assignedRole === "admin" ? department : undefined,
     });
 
     await user.save();
@@ -46,6 +67,7 @@ const register = async (req, res) => {
     const token = createToken(user);
 
     return res.status(201).json({
+      success: true,
       token,
       user: {
         id: user._id,
@@ -58,7 +80,7 @@ const register = async (req, res) => {
     });
   } catch (err) {
     console.error("[Auth Register Error]", err);
-    return res.status(500).json({ message: "Registration failed", error: err.message });
+    return res.status(500).json({ success: false, message: "Registration failed", error: err.message });
   }
 };
 

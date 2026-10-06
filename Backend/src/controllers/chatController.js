@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const ChatSession = require("../models/ChatSession");
 const ChatMessage = require("../models/ChatMessage");
 const { hybridRetrieve } = require("../rag/retrieval");
@@ -19,8 +20,8 @@ const handleChatQuery = async (req, res) => {
 
     // 1. Locate or create chat session
     let session;
-    if (sessionId) {
-      session = await ChatSession.findOne({ _id: sessionId, userId });
+    if (sessionId && mongoose.isValidObjectId(sessionId)) {
+      session = await ChatSession.findOne({ _id: sessionId, ...(userId ? { userId } : {}) });
     }
     if (!session && userId) {
       const titleSnippet = message.slice(0, 35) + (message.length > 35 ? "..." : "");
@@ -117,10 +118,108 @@ const handleChatQuery = async (req, res) => {
  */
 const getChatSessions = async (req, res) => {
   try {
-    const sessions = await ChatSession.find({ userId: req.user._id }).sort({ updatedAt: -1 });
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.json({ sessions: [] });
+    }
+    const sessions = await ChatSession.find({ userId }).sort({ updatedAt: -1 });
     return res.json({ sessions });
   } catch (err) {
     return res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * Get full history / inquiries for user
+ */
+const getHistory = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.json({ success: true, count: 0, history: [] });
+    }
+
+    const sessions = await ChatSession.find({ userId }).sort({ updatedAt: -1 }).limit(50);
+    const sessionIds = sessions.map((s) => s._id);
+
+    // Fetch messages for these sessions
+    const messages = await ChatMessage.find({ sessionId: { $in: sessionIds } }).sort({ createdAt: 1 });
+
+    const history = sessions.map((s) => {
+      const sessionMsgs = messages.filter((m) => m.sessionId.toString() === s._id.toString());
+      const firstUserMsg = sessionMsgs.find((m) => m.role === "user");
+      const firstAssistantMsg = sessionMsgs.find((m) => m.role === "assistant");
+
+      return {
+        id: s._id,
+        sessionId: s._id,
+        title: s.title || "Campus Inquiry",
+        query: firstUserMsg ? firstUserMsg.content : s.title,
+        answer: firstAssistantMsg ? firstAssistantMsg.content : null,
+        sources: firstAssistantMsg ? firstAssistantMsg.sources : [],
+        confidence: firstAssistantMsg ? firstAssistantMsg.confidence : null,
+        timestamp: s.createdAt,
+        updatedAt: s.updatedAt,
+      };
+    });
+
+    return res.json({ success: true, count: history.length, history });
+  } catch (err) {
+    console.error("[Get History Error]", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Clear all chat history or specific session
+ */
+const clearHistory = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const { sessionId } = req.query;
+
+    if (sessionId) {
+      if (mongoose.isValidObjectId(sessionId)) {
+        await ChatMessage.deleteMany({ sessionId, ...(userId ? { userId } : {}) });
+        await ChatSession.deleteOne({ _id: sessionId, ...(userId ? { userId } : {}) });
+      }
+      return res.json({
+        success: true,
+        message: "Session history cleared successfully.",
+      });
+    }
+
+    if (userId) {
+      await ChatMessage.deleteMany({ userId });
+      await ChatSession.deleteMany({ userId });
+    }
+
+    return res.json({
+      success: true,
+      message: "Chat history cleared successfully.",
+    });
+  } catch (err) {
+    console.error("[Clear History Error]", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Delete a single chat session
+ */
+const deleteSession = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const userId = req.user?._id;
+
+    if (sessionId && mongoose.isValidObjectId(sessionId)) {
+      await ChatMessage.deleteMany({ sessionId, ...(userId ? { userId } : {}) });
+      await ChatSession.deleteOne({ _id: sessionId, ...(userId ? { userId } : {}) });
+    }
+
+    return res.json({ success: true, message: "Session deleted successfully." });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -131,7 +230,7 @@ const getSessionMessages = async (req, res) => {
   try {
     const messages = await ChatMessage.find({
       sessionId: req.params.sessionId,
-      userId: req.user._id,
+      ...(req.user?._id ? { userId: req.user._id } : {}),
     }).sort({ createdAt: 1 });
     return res.json({ messages });
   } catch (err) {
@@ -143,4 +242,7 @@ module.exports = {
   handleChatQuery,
   getChatSessions,
   getSessionMessages,
+  getHistory,
+  clearHistory,
+  deleteSession,
 };

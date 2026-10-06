@@ -36,13 +36,28 @@ const isDbConnected = () => mongoose.connection.readyState === 1;
 // Register route
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password, role, rollNo, department } = req.body;
+    const { name, email, password, role, rollNo, department, adminToken } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
         message: "Name, email, and password are required.",
       });
+    }
+
+    const providedToken = req.body.accessToken || req.body.facultyToken || req.body.adminToken;
+    if (role === "faculty" || role === "admin") {
+      const requiredToken =
+        process.env.FACULTY_ACCESS_TOKEN ||
+        process.env.ADMIN_ACCESS_TOKEN ||
+        "CAMPUS_AI_ADMIN_SECURE_2026_KEY";
+      if (!providedToken || providedToken.trim() !== requiredToken.trim()) {
+        return res.status(403).json({
+          success: false,
+          message:
+            "Invalid or missing Access Token. Only authorized faculty and staff with the valid token can create a Faculty account.",
+        });
+      }
     }
 
     const cleanEmail = email.toLowerCase().trim();
@@ -171,7 +186,7 @@ router.post("/login", async (req, res) => {
       try {
         const user = await User.findOne({ email: cleanEmail });
         if (user) {
-          if (role && user.role !== role) {
+          if (role && user.role !== role && !(role === "faculty" && user.role === "admin")) {
             return res.status(403).json({
               success: false,
               message: `This account is registered as ${user.role}. Please switch role to ${user.role}.`,
@@ -215,7 +230,7 @@ router.post("/login", async (req, res) => {
     let memUser = memoryUsers.find((u) => u.email === cleanEmail);
 
     if (memUser) {
-      if (role && memUser.role !== role) {
+      if (role && memUser.role !== role && !(role === "faculty" && memUser.role === "admin")) {
         return res.status(403).json({
           success: false,
           message: `This account is registered as ${memUser.role}. Please switch role to ${memUser.role}.`,

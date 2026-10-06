@@ -51,4 +51,31 @@ const requireRole = (...roles) => {
   };
 };
 
-module.exports = { authenticate, requireRole };
+const optionalAuthenticate = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET || "campus_ai_super_secret_jwt_key_2026");
+      } catch (verifyErr) {
+        try {
+          decoded = jwt.verify(token, "campus_ai_super_secret_jwt_key_2026");
+        } catch (e) {
+          decoded = null;
+        }
+      }
+
+      if (decoded && decoded.id) {
+        const user = await User.findById(decoded.id).select("-password");
+        if (user) req.user = user;
+      }
+    }
+  } catch (error) {
+    // Continue as guest
+  }
+  next();
+};
+
+module.exports = { authenticate, optionalAuthenticate, requireRole };

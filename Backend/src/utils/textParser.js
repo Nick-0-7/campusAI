@@ -216,10 +216,10 @@ function splitIntoEstimatedPages(text) {
 async function extractPdfWithGeminiMultimodal(dataBuffer) {
   const { GoogleGenerativeAI } = require("@google/generative-ai");
   const candidateModels = [
-    process.env.GEMINI_MODEL || "gemini-3.8-flash",
-    "gemini-flash-latest",
-    "gemini-2.5-flash-lite",
-    "gemini-3.1-flash-lite",
+    process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
+    "gemini-3.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash",
   ];
 
   let lastError = null;

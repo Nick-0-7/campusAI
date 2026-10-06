@@ -199,19 +199,54 @@ const hybridRetrieve = async (query, options = {}) => {
     } else if (salientQueryTokens.length > 0 && salientCoverage < 0.3) {
       blendedScore = blendedScore * 0.25;
     } else {
-      // Title / Section match boost
+      // Title / Section match boost and Domain Intent Routing
       const qLower = query.toLowerCase();
-      if (entry.chunk.documentTitle && qLower.includes(entry.chunk.documentTitle.toLowerCase())) {
-        blendedScore = Math.min(1.0, blendedScore + 0.15);
+      const docTitleLower = (entry.chunk.documentTitle || "").toLowerCase();
+      const sectionLower = (entry.chunk.section || "").toLowerCase();
+      const catLower = (entry.chunk.category || "").toLowerCase();
+
+      // Institutional Domain Intent Routing: ensures queries for placements, exams, etc.
+      // prioritize actual policy/placement documents over generic meeting calendars.
+      const domains = [
+        {
+          key: "placement",
+          terms: ["placement", "placements", "placed", "package", "lpa", "offer", "job", "recruiter", "company", "tpo", "hiring", "drive", "interview"],
+        },
+        {
+          key: "attendance",
+          terms: ["attendance", "present", "absent", "condonation", "detention", "defaulter", "75%"],
+        },
+        {
+          key: "exam",
+          terms: ["exam", "examination", "re-evaluation", "reval", "grade", "cgpa", "sgpa", "backlog", "kt", "marks", "hall ticket"],
+        },
+        {
+          key: "scholarship",
+          terms: ["scholarship", "financial aid", "freeship", "merit", "concession", "income certificate", "aid"],
+        },
+      ];
+
+      for (const d of domains) {
+        if (d.terms.some((t) => qLower.includes(t))) {
+          const isTargetDoc = docTitleLower.includes(d.key) || catLower.includes(d.key) || sectionLower.includes(d.key);
+          if (isTargetDoc) {
+            blendedScore += 0.35;
+          } else if (docTitleLower.includes("calendar") || docTitleLower.includes("schedule")) {
+            blendedScore -= 0.20;
+          }
+        }
       }
-      if (entry.chunk.section && qLower.includes(entry.chunk.section.toLowerCase())) {
-        blendedScore = Math.min(1.0, blendedScore + 0.1);
+
+      // Title & Section keyword match boost
+      for (const token of salientQueryTokens) {
+        if (docTitleLower.includes(token)) blendedScore += 0.15;
+        if (sectionLower.includes(token)) blendedScore += 0.10;
       }
     }
 
     return {
       ...entry.chunk,
-      confidence: Math.round(blendedScore * 100) / 100,
+      confidence: Math.min(1.0, Math.max(0.0, Math.round(blendedScore * 100) / 100)),
     };
   });
 

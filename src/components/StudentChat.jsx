@@ -23,7 +23,10 @@ import {
   MoreHorizontal,
   GraduationCap,
   ChevronDown,
-  ShieldCheck
+  ShieldCheck,
+  Trash2,
+  MessageSquare,
+  ArrowRight
 } from "lucide-react";
 
 const StudentChat = () => {
@@ -51,13 +54,97 @@ const StudentChat = () => {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  // Dynamic user query history
-  const [dynamicHistory, setDynamicHistory] = useState([
-    { id: "h1", query: "What is the minimum attendance requirement to appear for exams?" },
-    { id: "h2", query: "What documents are required for scholarship renewal?" },
-    { id: "h3", query: "Procedure for semester examination re-evaluation..." },
-    { id: "h4", query: "Campus placement drive eligibility and CGPA cutoff?" },
-  ]);
+  // Dynamic user query history with persistence and search
+  const [historySearch, setHistorySearch] = useState("");
+  const [dynamicHistory, setDynamicHistory] = useState(() => {
+    try {
+      const saved = localStorage.getItem("campusai_chat_history");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn("Failed to load chat history from localStorage", e);
+    }
+    return [
+      {
+        id: "h1",
+        query: "What is the minimum attendance requirement to appear for exams?",
+        answer: "Minimum Attendance: 75%\n\nStudents must maintain at least 75% attendance to be eligible to appear for the semester examination. A condonation of up to 10% may be granted on medical grounds.",
+        timestamp: "Recent",
+        date: "Today",
+      },
+      {
+        id: "h2",
+        query: "What documents are required for scholarship renewal?",
+        answer: "Scholarship Renewal Requirements: Grade Card (min 8.0 CGPA), income certificate, fee receipt, active student bank account passbook copy, and HOD recommendation.",
+        timestamp: "Recent",
+        date: "Today",
+      },
+      {
+        id: "h3",
+        query: "Procedure for semester examination re-evaluation...",
+        answer: "Re-evaluation Process: Apply online via Student ERP within 14 days of provisional result declaration with processing fee of ₹500 per subject.",
+        timestamp: "Recent",
+        date: "Today",
+      },
+      {
+        id: "h4",
+        query: "Campus placement drive eligibility and CGPA cutoff?",
+        answer: "Campus Placement Eligibility: Minimum cumulative CGPA of 6.50, zero active backlogs, and 75% pre-placement training attendance.",
+        timestamp: "Recent",
+        date: "Today",
+      },
+    ];
+  });
+
+  // Clear all history
+  const handleClearHistory = async () => {
+    if (window.confirm("Are you sure you want to clear your conversation history?")) {
+      try {
+        await api.chat.clearHistory({ studentId: currentUser?.id, sessionId });
+      } catch (e) {
+        console.warn("Backend clear history warning:", e);
+      }
+      setDynamicHistory([]);
+      localStorage.removeItem("campusai_chat_history");
+    }
+  };
+
+  // Delete single history item
+  const handleDeleteHistoryItem = (idToDelete, e) => {
+    if (e) e.stopPropagation();
+    setDynamicHistory((prev) => {
+      const updated = prev.filter((item) => item.id !== idToDelete);
+      localStorage.setItem("campusai_chat_history", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  // Select item from history to load or re-ask
+  const handleSelectHistoryItem = (item) => {
+    setActiveTab("home");
+    if (item.answer) {
+      setMessages([
+        {
+          id: "msg-user-" + item.id,
+          sender: "user",
+          text: item.query,
+          timestamp: item.timestamp || "Past",
+        },
+        {
+          id: "msg-bot-" + item.id,
+          sender: "assistant",
+          text: item.answer,
+          citations: item.citations || [],
+          isFoundInKnowledgeBase: true,
+          timestamp: item.timestamp || "Past",
+        },
+      ]);
+    } else {
+      handleSendMessage(item.query);
+    }
+  };
 
   // Apply theme to document root
   useEffect(() => {
@@ -282,6 +369,22 @@ const StudentChat = () => {
           }),
         };
         setMessages((prev) => [...prev, newBotMessage]);
+
+        // Save complete Q&A to history
+        setDynamicHistory((prev) => {
+          const entry = {
+            id: "h-" + Date.now(),
+            query: text,
+            answer: botData.answer,
+            citations: botData.citations || [],
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            date: "Today",
+          };
+          const filtered = prev.filter((item) => item.query.toLowerCase() !== text.toLowerCase());
+          const updated = [entry, ...filtered];
+          localStorage.setItem("campusai_chat_history", JSON.stringify(updated));
+          return updated;
+        });
       } else {
         throw new Error(response?.message || "Failed to get response");
       }
@@ -341,7 +444,7 @@ const StudentChat = () => {
       } else {
         found = false;
         fallbackAnswer =
-          "Information not found in the verified institutional knowledge base.\n\nThe Campus Knowledge Copilot only answers from verified circulars, notices, and handbooks provided by the institution to avoid hallucination.";
+          "Information not found in the verified institutional knowledge base.\n\nSaarthi AI only answers from verified circulars, notices, and handbooks provided by the institution to avoid hallucination.";
         fallbackCitations = [];
       }
 
@@ -406,7 +509,7 @@ const StudentChat = () => {
           <div className="axora-brand-icon">
             <Sparkles size={18} />
           </div>
-          <span className="axora-brand-text">CampusAI</span>
+          <span className="axora-brand-text">Saarthi AI</span>
         </div>
 
         {/* Search Bar */}
@@ -427,7 +530,6 @@ const StudentChat = () => {
             className={`axora-nav-item ${activeTab === "home" ? "active" : ""}`}
             onClick={() => {
               setActiveTab("home");
-              setMessages([]);
             }}
           >
             <Home size={15} />
@@ -445,28 +547,48 @@ const StudentChat = () => {
 
         {/* Grouped Chat History Timeline */}
         <div className="axora-history-container">
-          {sidebarHistoryItems.map((group) => {
-            const filteredItems = group.items.filter((item) =>
-              item.query.toLowerCase().includes(searchFilter.toLowerCase())
-            );
-            if (filteredItems.length === 0) return null;
+          <div className="axora-sidebar-history-head">
+            <span className="axora-timeline-header">Recent Inquiries</span>
+            {dynamicHistory.length > 0 && (
+              <button
+                type="button"
+                className="axora-sidebar-clear-btn"
+                onClick={handleClearHistory}
+                title="Clear inquiry history"
+              >
+                <Trash2 size={11} />
+                <span>Clear</span>
+              </button>
+            )}
+          </div>
+          {dynamicHistory
+            .filter((item) => item.query.toLowerCase().includes(searchFilter.toLowerCase()))
+            .map((item) => (
+              <button
+                key={item.id}
+                className="axora-history-item"
+                title={item.query}
+                onClick={() => handleSelectHistoryItem(item)}
+              >
+                {item.query}
+              </button>
+            ))}
 
-            return (
-              <div key={group.group}>
-                <div className="axora-timeline-header">{group.group}</div>
-                {filteredItems.map((item) => (
-                  <button
-                    key={item.id}
-                    className="axora-history-item"
-                    title={item.query}
-                    onClick={() => handleSendMessage(item.query)}
-                  >
-                    {item.query}
-                  </button>
-                ))}
-              </div>
-            );
-          })}
+          <div className="axora-timeline-header">Institutional Guidelines</div>
+          <button
+            className="axora-history-item"
+            title="Hostel residency curfew and gate pass rules..."
+            onClick={() => handleSendMessage("Hostel residency curfew and gate pass rules...")}
+          >
+            Hostel residency curfew and gate pass rules...
+          </button>
+          <button
+            className="axora-history-item"
+            title="Central library book borrowing limits and fine policy..."
+            onClick={() => handleSendMessage("Central library book borrowing limits and fine policy...")}
+          >
+            Central library book borrowing limits and fine policy...
+          </button>
         </div>
 
         {/* Sidebar Bottom Profile Bar */}
@@ -501,7 +623,7 @@ const StudentChat = () => {
         <header className="axora-top-header">
           {/* Model Selector Dropdown */}
           <div className="axora-model-selector">
-            <span>Campus Copilot</span>
+            <span>Saarthi Copilot</span>
             <ChevronDown size={12} className="arrow" />
           </div>
 
@@ -544,8 +666,146 @@ const StudentChat = () => {
           </div>
         </header>
 
-        {/* Center Content: Either Welcome View or Message Thread */}
-        {messages.length === 0 ? (
+        {/* Center Content: Either History View, Welcome View, or Message Thread */}
+        {activeTab === "history" ? (
+          /* ================================================================
+             DEDICATED CONVERSATION HISTORY VIEW WITH SEARCH & CLEAR
+             ================================================================ */
+          <div className="axora-history-view">
+            <div className="axora-history-header">
+              <div className="axora-history-header-left">
+                <div className="axora-history-title-row">
+                  <Clock size={22} className="axora-history-icon" />
+                  <h2>Conversation History</h2>
+                  <span className="axora-history-count-badge">
+                    {dynamicHistory.length} {dynamicHistory.length === 1 ? "inquiry" : "inquiries"}
+                  </span>
+                </div>
+                <p className="axora-history-subtitle">
+                  Review your past campus inquiries, citations, and verified AI answers.
+                </p>
+              </div>
+
+              <div className="axora-history-header-actions">
+                {dynamicHistory.length > 0 && (
+                  <button
+                    type="button"
+                    className="axora-clear-history-btn"
+                    onClick={handleClearHistory}
+                    title="Clear all conversation history"
+                  >
+                    <Trash2 size={15} />
+                    <span>Clear All History</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="axora-new-chat-btn"
+                  onClick={() => {
+                    setActiveTab("home");
+                    handleNewChat();
+                  }}
+                >
+                  <Plus size={15} />
+                  <span>New Chat</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Live Search Across History */}
+            {dynamicHistory.length > 0 && (
+              <div className="axora-history-search-bar">
+                <Search size={16} />
+                <input
+                  type="text"
+                  placeholder="Search across your saved history..."
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                />
+                {historySearch && (
+                  <button
+                    type="button"
+                    className="axora-history-search-clear"
+                    onClick={() => setHistorySearch("")}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* History Cards Grid or Empty State */}
+            {dynamicHistory.filter((item) =>
+              item.query.toLowerCase().includes(historySearch.toLowerCase()) ||
+              (item.answer && item.answer.toLowerCase().includes(historySearch.toLowerCase()))
+            ).length === 0 ? (
+              <div className="axora-history-empty-state">
+                <div className="axora-history-empty-icon">
+                  <Clock size={36} />
+                </div>
+                <h3>{historySearch ? "No Matching Inquiries" : "No Conversation History"}</h3>
+                <p>
+                  {historySearch
+                    ? `No past inquiries match "${historySearch}". Try another keyword or clear search.`
+                    : "Your conversation queries and answers will appear here as you ask questions in Saarthi AI."}
+                </p>
+                <button
+                  type="button"
+                  className="axora-history-start-btn"
+                  onClick={() => setActiveTab("home")}
+                >
+                  <span>Start New Conversation</span>
+                  <ArrowRight size={15} />
+                </button>
+              </div>
+            ) : (
+              <div className="axora-history-grid">
+                {dynamicHistory
+                  .filter((item) =>
+                    item.query.toLowerCase().includes(historySearch.toLowerCase()) ||
+                    (item.answer && item.answer.toLowerCase().includes(historySearch.toLowerCase()))
+                  )
+                  .map((item) => (
+                    <div
+                      key={item.id}
+                      className="axora-history-card"
+                      onClick={() => handleSelectHistoryItem(item)}
+                    >
+                      <div className="axora-history-card-top">
+                        <span className="axora-history-card-tag">
+                          <MessageSquare size={12} />
+                          <span>{item.date || item.timestamp || "Inquiry"}</span>
+                        </span>
+                        <button
+                          type="button"
+                          className="axora-history-delete-single-btn"
+                          title="Delete this inquiry"
+                          onClick={(e) => handleDeleteHistoryItem(item.id, e)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+
+                      <h4 className="axora-history-card-query">{item.query}</h4>
+
+                      {item.answer && (
+                        <p className="axora-history-card-preview">
+                          {item.answer}
+                        </p>
+                      )}
+
+                      <div className="axora-history-card-footer">
+                        <span className="axora-history-card-open-prompt">
+                          <span>Open in chat</span>
+                          <ArrowRight size={13} />
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        ) : messages.length === 0 ? (
           /* ================================================================
              EMPTY / WELCOME STATE (Exact match to Axora, NO SPHERE)
              ================================================================ */
@@ -568,7 +828,7 @@ const StudentChat = () => {
                   <textarea
                     ref={inputRef}
                     className="axora-textarea"
-                    placeholder="Message Campus AI..."
+                    placeholder="Message Saarthi AI..."
                     rows="1"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
@@ -820,7 +1080,7 @@ const StudentChat = () => {
                   <textarea
                     ref={inputRef}
                     className="axora-textarea"
-                    placeholder="Message Campus AI..."
+                    placeholder="Message Saarthi AI..."
                     rows="1"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
