@@ -1,17 +1,19 @@
-# CampusAI — Campus Knowledge Copilot (EDU-02)
+# Saarthi AI (CampusAI) — Institutional Knowledge Copilot
 
-> **Production-Quality MVP for Hackathon Submission**
-> An institution-specific AI knowledge assistant for colleges and universities built on the core principle:  
-> **"No Evidence → No Answer"**
+> **Production-Quality Institutional RAG Copilot for Higher Education**  
+> Built on the core principle: **"No Evidence → No Answer"**
 
 ---
 
 ## 🏛️ System Overview
 
-College policies, exam regulations, attendance rules, scholarships, and placements are traditionally scattered across disparate PDFs, notices, and handbooks. **CampusAI** is an AI-powered Campus Knowledge Copilot that provides:
+College policies, exam timetables, attendance regulations, scholarships, and placement rules are traditionally scattered across disparate PDFs, scanned notices, and academic handbooks. **Saarthi AI** is an institutional knowledge copilot providing:
+
 1. **Concise, factual answers** grounded strictly in institutional documents.
 2. **Exact source citations**: Document title, page number, section heading, and confidence metrics.
-3. **Strict hallucination prevention**: If supporting evidence is insufficient, it explicitly abstains with:  
+3. **Campus Slang & Vocabulary Expansion**: Seamlessly resolves campus terminology (`endsem`, `midsem`, `kt`, `backlog`, `reval`) to formal academic language (`End Semester Examination`, `Continuous Assessment`, `Remedial Exam`).
+4. **Calendar & Schedule Deductive Reasoning**: Correctly interprets monthly academic calendars, holiday tables, and date inquiries (e.g., distinguishing declared Probable Holidays from regular working days).
+5. **Strict Hallucination Prevention**: If supporting evidence is insufficient, it explicitly abstains with:  
    `"Information not found in the institutional knowledge base."`
 
 ---
@@ -21,23 +23,25 @@ College policies, exam regulations, attendance rules, scholarships, and placemen
 ```
 User (Student / Faculty / Admin)
   ↓
-React 19 + Vite 8 SPA (Dark glassmorphism UI)
+React 19 + Vite 8 SPA (Dark Glassmorphism UI, Speech-to-Text & TTS)
   ↓
 Node.js + Express 5 REST API (JWT & RBAC Middleware)
   ↓
-RAG Ingestion & Hybrid Retrieval Layer
+RAG Ingestion & Hybrid Retrieval Engine
   ├── Page-aware Multi-format Parser (PDF, DOCX, TXT, CSV)
+  ├── Multimodal Vision OCR Fallback for scanned documents
   ├── Semantic Chunking Engine (Preserves Page & Section boundaries)
+  ├── Campus Slang & Vocabulary Query Expander (endsem, midsem, kt, holidays)
   ├── Dense Vector Embeddings (Gemini text-embedding-004 + Local Vectorizer)
   ├── Okapi BM25 Lexical Keyword Search (Stopword-filtered)
   ├── Reciprocal Rank Fusion (RRF) Re-ranking
-  └── Strict Evidence & Salient Coverage Confidence Gate
+  └── Temporal & Schedule Intent Routing
   ↓
-Grounded Gemini Engine (gemini-2.5-flash / Extractive Grounding)
+Grounded Gemini Generation Engine (gemini-3.5-flash-lite / gemini-3.8-flash)
   ↓
-Verified Answer + Citation Cards + Abstention Shield
+Verified Answer + Source Citation Cards + Abstention Shield
   ↓
-MongoDB (Users, Documents, Versions, Chunks, Messages, Feedback, Audit)
+MongoDB Atlas (Users, Documents, Versions, Chunks, Messages, Feedback, Audit)
 ```
 
 ---
@@ -45,64 +49,98 @@ MongoDB (Users, Documents, Versions, Chunks, Messages, Feedback, Audit)
 ## 🚀 Quick Start Guide
 
 ### Prerequisites
-- Node.js (v18+)
-- MongoDB (Running locally on `mongodb://127.0.0.1:27017` or MongoDB Atlas)
+- **Node.js**: v18 or higher
+- **MongoDB**: MongoDB Atlas connection string or local MongoDB instance (`mongodb://127.0.0.1:27017/campusai`)
+- **Google Gemini API Key**: From [Google AI Studio](https://aistudio.google.com/)
+
+---
 
 ### 1. Backend Setup
+
 ```bash
 cd Backend
 npm install
-# Configure .env (pre-configured with local MongoDB)
-node src/server.js
 ```
-The server will start on `http://127.0.0.1:5000` and automatically seed default demo accounts.
+
+Create or configure `Backend/.env`:
+
+```env
+PORT=5000
+MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/campusai?retryWrites=true&w=majority
+JWT_SECRET=your_super_secret_jwt_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-3.5-flash-lite
+EMBEDDING_MODEL=gemini-embedding-001
+CONFIDENCE_THRESHOLD=0.45
+ADMIN_ACCESS_TOKEN=CAMPUS_AI_ADMIN_SECURE_2026_KEY
+FACULTY_ACCESS_TOKEN=CAMPUS_AI_ADMIN_SECURE_2026_KEY
+```
+
+Start the backend:
+```bash
+npm run start
+# Or for development with live reload:
+npm run dev
+```
+The backend server will run on `http://localhost:5000`.
+
+---
 
 ### 2. Frontend Setup
+
+In the root directory (`d:/campusAI`):
+
 ```bash
-# In the project root (d:/campusAI)
 npm install
 npm run dev
 ```
+
 The frontend application will be live at `http://localhost:5173`.
 
 ---
 
 ## 🔑 Demo Accounts
 
-For instant hackathon demonstration, click the **"Demo Accounts"** fast-fill links on the Login screen:
+For fast demonstration, the login screen provides role toggles and quick access:
 
 | Role | Email | Password | Access Rights |
 | :--- | :--- | :--- | :--- |
-| **Student** 🎓 | `student@campus.edu` | `StudentPassword123!` | Copilot Chat, Citation Explorer, Feedback |
-| **Admin** 🛡️ | `admin@campus.edu` | `AdminPassword123!` | Document Ingestion (PDF/DOCX/CSV), Versioning, Chunk Inspector, Metrics |
+| **Student** 🎓 | `student@campus.edu` | `StudentPassword123!` | AI Copilot Chat, Citation Explorer, Feedback, Chat History |
+| **Faculty** 📚 | `faculty@campus.edu` | `FacultyPassword123!` | Document Uploads, Category Tagging, Department Management |
+| **Admin** 🛡️ | `admin@campus.edu` | `AdminPassword123!` | Knowledge Base Hub, Multi-format Ingestion, Version Control, Analytics |
 
 ---
 
 ## 🧪 Demo Scenarios
 
-### Scenario A: Fact-Grounded Policy Query
-1. Log in as **Student**.
-2. Ask:  
-   `"What is the minimum attendance required for semester examination?"`
-3. **Result**:
-   - Answer: `"Students must maintain at least 75% attendance in lectures, tutorials, and practical laboratory sessions..."`
-   - Source Citation Card: `📄 Examination Rules.pdf | Page 1 | Section: Attendance Requirements`
-   - Confidence: `80% Match`
+### Scenario A: Calendar & Holiday Date Query
+- **Query:** `"When do we have holiday in October"`
+- **Result:**
+  - Extracts the institutional Academic Calendar for Academic Year 2026–27.
+  - Lists officially declared Probable Holidays: **Oct 2 (Mahatma Gandhi Jayanti)** & **Oct 20 (Dashahara)**.
+  - Clarifies that other dates remain regular academic working days.
+  - **Source Citation:** `Institute-Academic-Calendar-2026-27 | Page 2 | Confidence: 100%`
 
-### Scenario B: Strict Abstention Test ("No Evidence → No Answer")
-1. Ask:  
-   `"What is the policy for XYZ rule that does not exist?"`
-2. **Result**:
-   - The system executes Vector + BM25 search, checks salient keyword coverage, and identifies **zero evidence**.
-   - Shield Banner displayed: `"Information not found in the institutional knowledge base."`
-   - **Zero hallucinations created.**
+### Scenario B: Campus Slang & Exam Schedule Query
+- **Query:** `"When the endsem will be ..."`
+- **Result:**
+  - Automatically expands `endsem` &rarr; `End Semester Examination (ESE)`.
+  - Accurately quotes the dates: **Nov 16–30, 2026** (S.Y., T.Y., B.Tech.) and **May 18–22, 2027** (B.Tech Self-Learning).
+  - **Source Citation:** `Institute-Academic-Calendar-2026-27 | Pages 2 & 4`
 
-### Scenario C: Admin Document Upload & Inspection
-1. Log in as **Admin**.
-2. Navigate to **Admin Portal**.
-3. View real-time grounding rate, abstention count, and user satisfaction metrics.
-4. Drag & drop any institutional PDF, DOCX, TXT, or CSV.
-5. Click **"Inspect Chunks"** on any document to verify how the engine extracted and tagged individual pages and sections.
+### Scenario C: Fact-Grounded Attendance Policy
+- **Query:** `"What is the minimum attendance required for semester examination?"`
+- **Result:**
+  - States the **75% minimum attendance rule** across lectures, tutorials, and practical labs.
+  - Details medical condonation rules (65%–74%) and detention below 65%.
+  - **Source Citation:** `Academic Rules and Regulations (SITCOE) | Page 4`
+
+### Scenario D: Strict Abstention Test ("No Evidence → No Answer")
+- **Query:** `"What is the policy for XYZ rule that does not exist?"`
+- **Result:**
+  - Executes Hybrid Vector + BM25 search and detects zero factual support.
+  - Displays: `"Information not found in the institutional knowledge base."`
+  - **Zero hallucinations produced.**
 
 ---
 
@@ -110,48 +148,47 @@ For instant hackathon demonstration, click the **"Demo Accounts"** fast-fill lin
 
 ```
 d:/campusAI/
-├── sample_docs/              # Test institutional files (Examination, Scholarships, Placements)
-├── src/                      # Frontend Application (React 19 + Vite)
+├── sample_docs/              # Institutional test documents (Examination, Calendar, Manuals)
+├── src/                      # Frontend Application (React 19 + Vite 8)
+│   ├── assets/               # SaarthiAI glowing cosmic orb logo & graphics
 │   ├── components/
-│   │   ├── Hero.jsx          # Landing page with video background & CTA
-│   │   ├── Navbar.jsx        # Glassmorphic navigation bar
-│   │   ├── Login.jsx         # Sign-in with Student/Faculty/Admin toggle & Demo fill
-│   │   ├── Register.jsx      # Role-based account creation
-│   │   ├── Chat.jsx          # Copilot Chat with Citation Cards & Feedback
-│   │   └── Admin.jsx         # Admin Knowledge Hub & Multi-format Uploader
-│   ├── templates/            # Curated dark stylesheets
-│   │   ├── landing.css
-│   │   ├── login.css
-│   │   ├── chat.css
-│   │   └── admin.css
+│   │   ├── Hero.jsx          # Futuristic landing page with glowing orb & CTAs
+│   │   ├── Navbar.jsx        # Glassmorphic top navigation bar
+│   │   ├── Login.jsx         # Sign-in with Student / Faculty / Admin roles
+│   │   ├── Register.jsx      # Role-based account registration with token validation
+│   │   ├── StudentChat.jsx   # AI Copilot Chat with Voice (STT & TTS), History & Citations
+│   │   ├── FacultyDashboard.jsx # Faculty document management & upload portal
+│   │   ├── Admin.jsx         # Administrative Knowledge Hub, Stats & Chunk Inspector
+│   │   └── FormattedMessage.jsx # Preprocessor for markdown tables and OCR schedules
+│   ├── templates/            # Curated stylesheets (chat.css, dashboard.css, etc.)
 │   ├── services/
-│   │   └── api.js            # API client for backend communication
-│   ├── App.jsx               # Routing hub
+│   │   └── api.js            # Unified API client for local & deployed backends
+│   ├── App.jsx               # React Router configuration
 │   └── main.jsx
-└── Backend/                  # Backend Application (Node.js + Express + MongoDB)
+└── Backend/                  # Backend Application (Node.js + Express 5 + MongoDB)
     ├── src/
-    │   ├── config/db.js      # MongoDB Mongoose connection
+    │   ├── config/db.js      # MongoDB connection
     │   ├── models/           # User, Document, DocumentVersion, DocumentChunk, ChatSession, ChatMessage, Feedback, AuditLog
     │   ├── middleware/       # JWT Auth, Role-based Access, Multer Upload
-    │   ├── utils/textParser.js # Multi-format extractor (PDF pages, DOCX, TXT, CSV)
+    │   ├── utils/textParser.js # Multi-format extractor with Multimodal OCR fallback
     │   ├── rag/
     │   │   ├── chunker.js    # Semantic chunking preserving page & section
-    │   │   ├── embeddings.js # Gemini text-embedding-004 + dense vectorizer
+    │   │   ├── embeddings.js # Gemini text-embedding-004 + dense semantic vectorizer
     │   │   ├── bm25.js       # Okapi BM25 keyword index with stopword filtering
-    │   │   ├── retrieval.js  # Hybrid RRF search & salient coverage evidence gate
-    │   │   └── gemini.js     # Strict grounded generation & citation validation
+    │   │   ├── retrieval.js  # Hybrid RRF, campus slang expansion, and schedule intent routing
+    │   │   └── gemini.js     # Grounded generation, model fallback, and calendar reasoning
     │   ├── controllers/      # Auth, Document, Chat, Feedback controllers
-    │   ├── routes/           # REST endpoints
-    │   └── server.js         # Express app entrypoint & seeder
-    └── scripts/seedDocuments.js # Document ingestion CLI script
+    │   ├── routes/           # REST API endpoints
+    │   └── server.js         # Express app entrypoint, health diagnostics & seeder
+    └── scripts/seedDocuments.js # Automated document indexing script
 ```
 
 ---
 
-## 🛡️ Hallucination & Security Controls
+## 🛡️ Reliability & Guardrails
 
-1. **Closed Knowledge Scope**: Queries are only answered against indexed institutional chunks.
-2. **Salient Keyword Coverage**: If key non-stopword query tokens (e.g. "XYZ") have 0% coverage in candidate chunks, confidence is capped at 0.
-3. **Confidence Threshold Gate**: Any candidate scoring below the confidence threshold (`0.35`) triggers immediate abstention.
-4. **Strict System Prompt**: Low temperature (`0.1`), explicit negative constraint forbidding outside knowledge for campus claims.
-5. **Role-Based Protection**: Admin upload and deletion endpoints are strictly locked to `admin` / `faculty` JWT tokens.
+1. **Evidence Gating**: Questions are answered exclusively using retrieved source chunks.
+2. **Campus Slang Expander**: Bridges informal student shorthand (`endsem`, `midsem`, `kt`) to official academic documents.
+3. **Temporal Intent Routing**: Detects calendar and holiday inquiries and routes them directly to academic schedules.
+4. **Model Fallback Chain**: Prioritizes `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, and `gemini-flash-lite-latest` with instant failover on 404/429 limits.
+5. **Audited Log Tracing**: Every authentication, document modification, and chat interaction logs audit trails.
