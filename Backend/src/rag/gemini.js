@@ -23,16 +23,22 @@ ${chunk.content}
 Your core principle is: "No Evidence → No Answer".
 
 CRITICAL INSTRUCTIONS:
-1. Answer ONLY using the facts explicitly stated in the RETRIEVED SOURCES below.
-2. If the sources do NOT contain enough clear evidence to answer the student's question, you MUST answer EXACTLY:
+1. Answer factually using the facts explicitly stated in the RETRIEVED SOURCES below.
+2. For dates, schedules, academic calendars, and holiday inquiries:
+   - Identify the inquired date, month, and academic year.
+   - Look at the monthly schedule and the declared "Probable Holidays" or events for that specific month in the source.
+   - If specific holidays are declared (e.g., Oct 2 - Mahatma Gandhi Jayanti, Oct 20 - Dashahara) and the inquired date is NOT among them, explicitly inform the student:
+     a) Whether that date is a holiday or a regular academic working day.
+     b) Which specific holidays are officially declared for that month according to the source.
+3. If the sources mention related policies or regulations but do NOT contain a specific detail requested by the student (e.g., specific fee amount, specific date), explicitly state what the document specifies and clarify that the specific detail is not mentioned in the retrieved documents.
+4. If the retrieved sources do NOT contain enough relevant context to address the question at all, answer EXACTLY:
 "${ABSTENTION_MESSAGE}"
-3. Do NOT invent, assume, extrapolate, or use general external knowledge for campus policies, eligibility criteria, percentages, dates, deadlines, or rules.
-4. Format your answer cleanly, aesthetically, and professionally using structured Markdown:
-   - Use bold section titles (e.g., **Key Highlights**, **Academic Schedule**, **Important Dates**, **Holidays**).
-   - Use structured bullet points (•) for distinct items, dates, and provisions.
-   - For timetables, academic calendars, or tabular schedules, organize them into a clean Markdown table with headers and row dividers (| Week | Dates | Events / Particulars |).
-   - Ensure blank lines separate paragraphs, headers, and tables so the content is clean and readable.
-5. At the end of your answer, you MUST specify which Source number(s) you used.
+5. Format your answer cleanly, aesthetically, and professionally using structured Markdown:
+   - Use bold section titles (e.g., **Academic Schedule**, **Holiday Status**, **Evaluation Guidelines**).
+   - Use structured bullet points (•) for distinct items and dates.
+   - For timetables or tabular schedules, organize them into a clean Markdown table with headers (| Month / Week | Dates | Particulars / Events |).
+   - Separate sections with blank lines for high readability.
+6. At the end of your answer, cite the Source number(s) you used (e.g., **Sources:** [Source 1]).
 
 RETRIEVED SOURCES:
 ${contextBlocks}
@@ -87,11 +93,10 @@ const generateGroundedAnswer = async (question, retrievedChunks, options = {}) =
       const genAI = new GoogleGenerativeAI(apiKey.trim());
       const candidateModels = [
         process.env.GEMINI_MODEL,
-        "gemini-3.8-flash-lite",
-        "gemini-3.8-flash",
         "gemini-3.5-flash-lite",
+        "gemini-3.1-flash-lite",
         "gemini-flash-lite-latest",
-        "gemini-3.5-flash",
+        "gemini-3.8-flash",
       ].filter(Boolean);
 
       let text = null;
@@ -111,7 +116,11 @@ const generateGroundedAnswer = async (question, retrievedChunks, options = {}) =
             text = response.text().trim();
             if (text) break;
           } catch (mErr) {
-            // Short backoff on temporary 503 demand spikes
+            console.warn(`[Gemini] Model ${mName} attempt ${attempt + 1} failed: ${mErr.message?.slice(0, 100)}`);
+            // Fast skip on 404 (model not found) or 429 (quota exceeded)
+            if (mErr.message && (mErr.message.includes("404") || mErr.message.includes("429"))) {
+              break;
+            }
             if (mErr.message && mErr.message.includes("503") && attempt === 0) {
               await new Promise((res) => setTimeout(res, 800));
             }

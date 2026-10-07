@@ -86,8 +86,37 @@ const hybridRetrieve = async (query, options = {}) => {
     };
   }
 
+  // Helper: Expand campus-specific vocabulary, slang, and common typos
+  function expandCampusQuery(rawQuery) {
+    let q = rawQuery.toLowerCase();
+    q = q.replace(/\battendence\b/g, "attendance");
+    q = q.replace(/\bre-eval\b|\breeval\b/g, "re-evaluation revaluation");
+
+    if (/\bendsem\b|\bend-sem\b/i.test(q)) {
+      q += " end semester examination ese";
+    }
+    if (/\bmidsem\b|\bmid-sem\b/i.test(q)) {
+      q += " mid semester examination mse";
+    }
+    if (/\breexam\b|\bre-exam\b/i.test(q)) {
+      q += " re-examination remedial summer examination";
+    }
+    if (/\bkt\b|\bbacklog\b|\barrear\b/i.test(q)) {
+      q += " backlog remedial re-examination";
+    }
+    if (/\bholiday\b|\bholidays\b|\bvacation\b/i.test(q)) {
+      q += " probable holidays academic calendar schedule";
+    }
+    if (/\btimetable\b|\btime-table\b|\btime table\b/i.test(q)) {
+      q += " schedule academic calendar dates";
+    }
+    return q;
+  }
+
+  const expandedQuery = expandCampusQuery(query);
+
   // 2. Vector Semantic Retrieval
-  const queryEmbedding = await generateEmbedding(query);
+  const queryEmbedding = await generateEmbedding(expandedQuery);
   const vectorScores = [];
 
   for (const chunk of candidateChunks) {
@@ -104,7 +133,7 @@ const hybridRetrieve = async (query, options = {}) => {
 
   // 3. BM25 Keyword Retrieval
   const bm25 = cachedBM25 || (await getOrUpdateBM25Index());
-  const bm25Results = bm25.search(query, 50);
+  const bm25Results = bm25.search(expandedQuery, 50);
 
   // Normalize BM25 scores to [0, 1]
   const maxBM25 = bm25Results.length > 0 ? bm25Results[0].score : 1;
@@ -165,8 +194,7 @@ const hybridRetrieve = async (query, options = {}) => {
     "any", "all", "which", "who", "whom", "where", "when", "why", "whose", "guidelines"
   ]);
 
-  const salientQueryTokens = query
-    .toLowerCase()
+  const salientQueryTokens = expandedQuery
     .replace(/[^\w\s]/g, " ")
     .split(/\s+/)
     .filter((w) => w.length > 2 && !STOPWORDS.has(w));
@@ -180,6 +208,8 @@ const hybridRetrieve = async (query, options = {}) => {
 
   // 5. Final Re-ranking score
   // Combined confidence = (0.55 * vectorScore) + (0.45 * bm25Score)
+  const isScheduleQuery = /\b(when|date|dates|schedule|calendar|month|day|tomorrow|timeline|timing|deadline)\b/i.test(query);
+
   const ranked = Array.from(chunkMap.values()).map((entry) => {
     let blendedScore = entry.vectorScore * 0.55 + entry.bm25Score * 0.45;
 
@@ -192,21 +222,17 @@ const hybridRetrieve = async (query, options = {}) => {
     }
     const salientCoverage = salientQueryTokens.length > 0 ? hits / salientQueryTokens.length : 1.0;
 
-    // Strict No Evidence Gate:
-    // If specific salient terms are requested (e.g. "XYZ") and none exist in this chunk, score is 0
-    if (salientQueryTokens.length > 0 && hits === 0) {
+    if (salientQueryTokens.length > 0 && hits === 0 && entry.vectorScore < 0.5) {
       blendedScore = 0;
-    } else if (salientQueryTokens.length > 0 && salientCoverage < 0.3) {
-      blendedScore = blendedScore * 0.25;
+    } else if (salientQueryTokens.length > 0 && salientCoverage < 0.2) {
+      blendedScore = blendedScore * 0.4;
     } else {
-      // Title / Section match boost and Domain Intent Routing
       const qLower = query.toLowerCase();
       const docTitleLower = (entry.chunk.documentTitle || "").toLowerCase();
       const sectionLower = (entry.chunk.section || "").toLowerCase();
       const catLower = (entry.chunk.category || "").toLowerCase();
 
-      // Institutional Domain Intent Routing: ensures queries for placements, exams, etc.
-      // prioritize actual policy/placement documents over generic meeting calendars.
+      // Institutional Domain Intent Routing
       const domains = [
         {
           key: "placement",
@@ -218,7 +244,7 @@ const hybridRetrieve = async (query, options = {}) => {
         },
         {
           key: "exam",
-          terms: ["exam", "examination", "re-evaluation", "reval", "grade", "cgpa", "sgpa", "backlog", "kt", "marks", "hall ticket"],
+          terms: ["exam", "examination", "re-evaluation", "reval", "grade", "cgpa", "sgpa", "backlog", "kt", "marks", "hall ticket", "endsem", "midsem"],
         },
         {
           key: "scholarship",
@@ -231,10 +257,13 @@ const hybridRetrieve = async (query, options = {}) => {
           const isTargetDoc = docTitleLower.includes(d.key) || catLower.includes(d.key) || sectionLower.includes(d.key);
           if (isTargetDoc) {
             blendedScore += 0.35;
-          } else if (docTitleLower.includes("calendar") || docTitleLower.includes("schedule")) {
-            blendedScore -= 0.20;
           }
         }
+      }
+
+      // Schedule & Calendar intent boost
+      if (isScheduleQuery && (docTitleLower.includes("calendar") || docTitleLower.includes("schedule") || catLower.includes("calendar"))) {
+        blendedScore += 0.35;
       }
 
       // Title & Section keyword match boost
