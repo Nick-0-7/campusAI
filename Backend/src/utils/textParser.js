@@ -216,12 +216,9 @@ function splitIntoEstimatedPages(text) {
 async function extractPdfWithGeminiMultimodal(dataBuffer) {
   const { GoogleGenerativeAI } = require("@google/generative-ai");
   const candidateModels = [
-    process.env.GEMINI_MODEL || "gemini-3.8-flash-lite",
-    "gemini-3.8-flash-lite",
-    "gemini-3.8-flash",
+    process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
     "gemini-3.5-flash-lite",
     "gemini-flash-lite-latest",
-    "gemini-3.5-flash",
   ];
 
   let lastError = null;
@@ -232,7 +229,7 @@ async function extractPdfWithGeminiMultimodal(dataBuffer) {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
       const model = genAI.getGenerativeModel({ model: modelName });
       const prompt =
-        "You are an institutional document OCR processor. Extract all text, tables, academic calendars, semester schedules, dates, and sections from this PDF page-by-page. For each page in the document, format the output starting with '--- PAGE <number> ---' followed by the text of that page.";
+        "You are an academic curriculum analyst and institutional document parser. For this document, provide a comprehensive breakdown and structured extraction of: 1) Curriculum & academic structure, evaluation schemes, and course distribution tables (course codes, names, teaching hours, marks, credits, exam formats). 2) Detailed course syllabus for each subject and elective, including unit titles, topics, prerequisites, and textbooks. 3) Lab experiments, projects, and guidelines. Format each distinct course, page, or module with '--- SECTION: <Course Name or Page Number> ---' so each can be indexed into the knowledge base.";
 
       const result = await model.generateContent([
         {
@@ -247,18 +244,22 @@ async function extractPdfWithGeminiMultimodal(dataBuffer) {
       const response = await result.response;
       const fullText = response.text();
 
-      const pageBlocks = fullText.split(/---\s*PAGE\s*(\d+)\s*---/i);
+      const sectionRegex = /---\s*SECTION:\s*([^-\n]+)\s*---/i;
+      const rawBlocks = fullText.split(sectionRegex);
       const pages = [];
 
-      if (pageBlocks.length > 1) {
-        for (let i = 1; i < pageBlocks.length; i += 2) {
-          const pageNum = parseInt(pageBlocks[i], 10) || Math.ceil(i / 2);
-          const pageText = pageBlocks[i + 1] ? pageBlocks[i + 1].trim() : "";
-          pages.push({
-            pageNumber: pageNum,
-            section: detectSectionTitle(pageText),
-            text: cleanRawText(pageText),
-          });
+      if (rawBlocks.length > 1) {
+        let pageNum = 1;
+        for (let i = 1; i < rawBlocks.length; i += 2) {
+          const sectionTitle = rawBlocks[i] ? rawBlocks[i].trim() : "General";
+          const blockText = rawBlocks[i + 1] ? rawBlocks[i + 1].trim() : "";
+          if (blockText.length > 10) {
+            pages.push({
+              pageNumber: pageNum++,
+              section: sectionTitle,
+              text: cleanRawText(blockText),
+            });
+          }
         }
       } else {
         return splitIntoEstimatedPages(fullText);

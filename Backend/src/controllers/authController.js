@@ -59,7 +59,8 @@ const register = async (req, res) => {
       password,
       role: assignedRole,
       rollNo: assignedRole === "student" ? rollNo : undefined,
-      department: assignedRole === "faculty" || assignedRole === "admin" ? department : undefined,
+      department: department ? department.trim() : "General",
+      year: req.body.year ? req.body.year.trim() : "1st Year",
     });
 
     await user.save();
@@ -83,6 +84,7 @@ const register = async (req, res) => {
         role: user.role,
         rollNo: user.rollNo,
         department: user.department,
+        year: user.year,
       },
     });
   } catch (err) {
@@ -133,7 +135,8 @@ const login = async (req, res) => {
         email: user.email,
         role: user.role,
         rollNo: user.rollNo,
-        department: user.department,
+        department: user.department || "General",
+        year: user.year || "1st Year",
       },
     });
   } catch (err) {
@@ -151,4 +154,35 @@ const getMe = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getMe };
+const updateProfile = async (req, res) => {
+  try {
+    const { name, department, year, rollNo } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    if (name) user.name = name.trim();
+    if (department) user.department = department.trim();
+    if (year) user.year = year.trim();
+    if (rollNo !== undefined) user.rollNo = rollNo ? rollNo.trim() : "";
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        rollNo: user.rollNo,
+        department: user.department,
+        year: user.year,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { register, login, getMe, updateProfile };

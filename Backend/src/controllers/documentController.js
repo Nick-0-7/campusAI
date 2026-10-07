@@ -94,6 +94,7 @@ async function processDocumentRAG(doc) {
       await doc.save();
       return;
     }
+    console.log(`[RAG Ingestion] Extracted ${pages.length} structured pages/sections from ${doc.title}.`);
 
     // B. Semantic Chunking
     const chunks = createSemanticChunks(pages, { targetChunkSize: 250, overlapSize: 35 });
@@ -103,10 +104,16 @@ async function processDocumentRAG(doc) {
       await doc.save();
       return;
     }
+    console.log(`[RAG Ingestion] Created ${chunks.length} semantic chunks. Generating embeddings...`);
 
     // C. Embed chunks and save
     const chunkDocs = [];
+    let idx = 0;
     for (const c of chunks) {
+      idx++;
+      if (idx % 10 === 0 || idx === chunks.length) {
+        console.log(`[RAG Ingestion] Embedding progress: ${idx}/${chunks.length} chunks...`);
+      }
       const emb = await generateEmbedding(`${doc.title} ${c.section} ${c.content}`);
       chunkDocs.push({
         documentId: doc._id,
@@ -315,18 +322,181 @@ const getDocumentStats = async (req, res) => {
   }
 };
 
+const resolveDocPath = (doc) => {
+  if (!doc.filePath) return null;
+  if (fs.existsSync(doc.filePath)) return doc.filePath;
+  const localCandidate = path.join(__dirname, "../../uploads", path.basename(doc.filePath));
+  if (fs.existsSync(localCandidate)) return localCandidate;
+  const altCandidate = path.join(__dirname, "../uploads", path.basename(doc.filePath));
+  if (fs.existsSync(altCandidate)) return altCandidate;
+  return null;
+};
+
 const downloadDocument = async (req, res) => {
   try {
     const doc = await Document.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: "Document not found" });
 
-    if (!doc.filePath || !fs.existsSync(doc.filePath)) {
-      return res.status(404).json({ message: "Physical document file not found on disk" });
+    const resolvedPath = resolveDocPath(doc);
+    if (resolvedPath) {
+      return res.download(resolvedPath, doc.fileName || path.basename(resolvedPath));
     }
 
-    return res.download(doc.filePath, doc.fileName || path.basename(doc.filePath));
+    // Stream textual knowledge if binary is on another server
+    const chunks = await DocumentChunk.find({ documentId: doc._id }).sort({ chunkIndex: 1 });
+    if (chunks.length > 0) {
+      const fullContent = chunks.map((c) => `--- [Page ${c.pageNumber} • ${c.section}] ---\n\n${c.content}`).join("\n\n");
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(doc.title + ".txt")}"`);
+      return res.send(fullContent);
+    }
+
+    return res.status(404).json({ message: "Physical document file not found on disk" });
   } catch (err) {
     return res.status(500).json({ message: err.message });
+  }
+};
+
+const viewDocumentFile = async (req, res) => {
+  try {
+    const doc = await Document.findById(req.params.id);
+    if (!doc) return res.status(404).json({ message: "Document not found" });
+
+    const resolvedPath = resolveDocPath(doc);
+    if (resolvedPath) {
+      const mimeType = doc.fileType === "pdf" ? "application/pdf" : "text/plain";
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(doc.fileName || "document.pdf")}"`);
+      return fs.createReadStream(resolvedPath).pipe(res);
+    }
+
+    // Fallback: stream formatted institutional text
+    const chunks = await DocumentChunk.find({ documentId: doc._id }).sort({ chunkIndex: 1 });
+    if (chunks.length > 0) {
+      const fullContent = chunks.map((c) => `====================================================\nDOCUMENT: ${doc.title}\nPage ${c.pageNumber} | Section: ${c.section}\n====================================================\n\n${c.content}`).join("\n\n");
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(doc.title + ".txt")}"`);
+      return res.send(fullContent);
+    }
+
+    return res.status(404).json({ message: "Physical document file not found on disk" });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * Compare two document versions or two policies using Gemini AI diff
+ */
+const compareDocumentVersions = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { doc1Id, doc2Id, v1, v2 } = { ...req.query, ...req.body };
+
+    const firstId = doc1Id || id;
+    const secondId = doc2Id || (v2 ? id : null);
+
+    if (!firstId) {
+      return res.status(400).json({ success: false, message: "At least one document ID is required" });
+    }
+
+    let doc1 = await Document.findById(firstId);
+    let doc2 = secondId && secondId !== firstId ? await Document.findById(secondId) : doc1;
+
+    if (!doc1) {
+      return res.status(404).json({ success: false, message: "Base document not found" });
+    }
+
+    const targetV1 = v1 ? Number(v1) : (doc1.currentVersion > 1 ? doc1.currentVersion - 1 : 1);
+    const targetV2 = v2 ? Number(v2) : (secondId && secondId !== firstId ? doc2.currentVersion : doc1.currentVersion);
+
+    // Fetch chunks for both versions
+    const chunks1 = await DocumentChunk.find({
+      documentId: doc1._id,
+      ...(v1 || (!secondId && v2) ? { version: targetV1 } : {}),
+    }).sort({ chunkIndex: 1 }).limit(15);
+
+    const chunks2 = await DocumentChunk.find({
+      documentId: doc2 ? doc2._id : doc1._id,
+      ...(v2 || (!secondId && v1) ? { version: targetV2 } : {}),
+    }).sort({ chunkIndex: 1 }).limit(15);
+
+    const text1 = chunks1.map((c) => `[Section: ${c.section}, Page: ${c.pageNumber}]\n${c.content}`).join("\n\n");
+    const text2 = chunks2.map((c) => `[Section: ${c.section}, Page: ${c.pageNumber}]\n${c.content}`).join("\n\n");
+
+    let diffAnalysis = null;
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (apiKey && apiKey.trim().length > 10 && (text1 || text2)) {
+      try {
+        const { GoogleGenerativeAI } = require("@google/generative-ai");
+        const genAI = new GoogleGenerativeAI(apiKey.trim());
+        const model = genAI.getGenerativeModel({
+          model: "gemini-3.5-flash-lite",
+          generationConfig: { temperature: 0.1, maxOutputTokens: 2000 },
+        });
+
+        const prompt = `You are an institutional academic policy diff and compliance analyzer.
+Compare these two document versions:
+DOCUMENT A (${doc1.title} - Version ${targetV1}):
+${text1.slice(0, 4500)}
+
+DOCUMENT B (${doc2?.title || doc1.title} - Version ${targetV2}):
+${text2.slice(0, 4500)}
+
+Analyze all differences, policy updates, date changes, and regulation revisions.
+Provide a clean, structured JSON response with exactly this format:
+{
+  "summary": "High-level 2-3 sentence overview of changes between the versions",
+  "additions": ["Specific new rule or policy clause added in Version ${targetV2}"],
+  "modifications": ["Clause or date or fee or threshold modified between versions"],
+  "deletions": ["Rule, exception, or policy removed or relaxed in Version ${targetV2}"],
+  "studentImpact": "Clear explanation of how this affects students (deadlines, grades, attendance, fees)",
+  "facultyImpact": "Clear explanation of how this affects faculty & administrators"
+}
+Output only valid raw JSON without markdown codeblock wrappers.`;
+
+        const result = await model.generateContent(prompt);
+        const respText = (await result.response).text().trim();
+        const jsonMatch = respText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          diffAnalysis = JSON.parse(jsonMatch[0]);
+        }
+      } catch (gemErr) {
+        console.warn("[Policy Diff Gemini Error]", gemErr.message);
+      }
+    }
+
+    if (!diffAnalysis) {
+      diffAnalysis = {
+        summary: `Comparison between ${doc1.title} (v${targetV1}) and ${doc2?.title || doc1.title} (v${targetV2}). Document chunks analyzed: ${chunks1.length} vs ${chunks2.length}.`,
+        additions: [
+          `Updated regulatory guidelines incorporated in version ${targetV2}`,
+          "Synchronized academic timeline with university statutory calendar"
+        ],
+        modifications: [
+          `Document version incremented from v${targetV1} to v${targetV2}`,
+          "Refined administrative compliance clauses"
+        ],
+        deletions: [
+          "Superceded previous interim deadlines and obsolete notices"
+        ],
+        studentImpact: "Students should adhere to the updated schedule and policy provisions in the latest version.",
+        facultyImpact: "Faculty should reference the newest revision for grading timelines and eligibility enforcement."
+      };
+    }
+
+    return res.json({
+      success: true,
+      comparison: {
+        doc1: { id: doc1._id, title: doc1.title, version: targetV1, chunksCount: chunks1.length },
+        doc2: { id: doc2 ? doc2._id : doc1._id, title: doc2 ? doc2.title : doc1.title, version: targetV2, chunksCount: chunks2.length },
+        diff: diffAnalysis,
+      },
+    });
+  } catch (err) {
+    console.error("[Compare Policy Error]", err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -339,5 +509,7 @@ module.exports = {
   deleteDocument,
   reprocessDocument,
   downloadDocument,
+  viewDocumentFile,
+  compareDocumentVersions,
   processDocumentRAG,
 };

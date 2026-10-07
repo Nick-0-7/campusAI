@@ -39,7 +39,11 @@ export const FormattedMessage = ({ content }) => {
     if (!content) return "";
     try {
       const cleaned = cleanAndFormatText(content);
-      const rawHtml = marked.parse(cleaned);
+      let rawHtml = marked.parse(cleaned);
+      // Wrap tables in responsive scroll container to prevent cramped layout
+      rawHtml = rawHtml
+        .replace(/<table>/g, '<div class="table-wrapper"><table>')
+        .replace(/<\/table>/g, '</table></div>');
       return DOMPurify.sanitize(rawHtml);
     } catch (err) {
       console.warn("Markdown parse error:", err);

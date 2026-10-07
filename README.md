@@ -11,10 +11,15 @@ College policies, exam timetables, attendance regulations, scholarships, and pla
 
 1. **Concise, factual answers** grounded strictly in institutional documents.
 2. **Exact source citations**: Document title, page number, section heading, and confidence metrics.
-3. **Campus Slang & Vocabulary Expansion**: Seamlessly resolves campus terminology (`endsem`, `midsem`, `kt`, `backlog`, `reval`) to formal academic language (`End Semester Examination`, `Continuous Assessment`, `Remedial Exam`).
-4. **Calendar & Schedule Deductive Reasoning**: Correctly interprets monthly academic calendars, holiday tables, and date inquiries (e.g., distinguishing declared Probable Holidays from regular working days).
-5. **Strict Hallucination Prevention**: If supporting evidence is insufficient, it explicitly abstains with:  
-   `"Information not found in the institutional knowledge base."`
+3. **Student Profile Context**: Personalized branch, academic year, and roll number context tags that adapt responses to the student's exact curriculum.
+4. **Visual PDF Citation Viewer**: Interactive document viewer highlighting grounded excerpts with direct page jumps.
+5. **Add to Calendar**: Instant one-click Google Calendar & `.ics` export for campus events, exams, and holidays.
+6. **Policy Version Diff Analyzer**: Administrative side-by-side policy version comparison for tracking circular revisions.
+7. **Institutional Knowledge Gap Heatmap**: Identifies frequent student queries with low retrieval confidence to pinpoint policy documentation gaps.
+8. **Campus Slang & Vocabulary Expansion**: Seamlessly resolves campus terminology (`endsem`, `midsem`, `kt`, `backlog`, `reval`) to formal academic language (`End Semester Examination`, `Continuous Assessment`, `Remedial Exam`).
+9. **Calendar & Schedule Deductive Reasoning**: Correctly interprets monthly academic calendars, holiday tables, and date inquiries (e.g., distinguishing declared Probable Holidays from regular working days).
+10. **Strict Hallucination Prevention**: If supporting evidence is insufficient, it explicitly abstains with:  
+    `"Information not found in the institutional knowledge base."`
 
 ---
 

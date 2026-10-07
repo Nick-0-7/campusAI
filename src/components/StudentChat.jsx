@@ -27,7 +27,14 @@ import {
   ShieldCheck,
   Trash2,
   MessageSquare,
-  ArrowRight
+  ArrowRight,
+  Calendar,
+  Download,
+  ExternalLink,
+  Edit3,
+  UserCheck,
+  Eye,
+  X,
 } from "lucide-react";
 
 const StudentChat = () => {
@@ -54,6 +61,23 @@ const StudentChat = () => {
   const [activeTab, setActiveTab] = useState("home");
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Feature 1: Student Profile Context State & Handlers
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [profileFormData, setProfileFormData] = useState({
+    name: "Student",
+    department: "Computer Science & Engineering",
+    year: "3rd Year",
+    rollNo: "CS2024-042",
+  });
+  const [profileSaving, setProfileSaving] = useState(false);
+
+  // Feature 2: Visual Citation & PDF Viewer Modal State
+  const [selectedCitation, setSelectedCitation] = useState(null);
+  const [citationViewMode, setCitationViewMode] = useState("highlight"); // "highlight" | "pdf"
+
+  // Feature 3: Calendar Event Generator State
+  const [calendarEvent, setCalendarEvent] = useState(null);
 
   // Dynamic user query history with persistence and search
   const [historySearch, setHistorySearch] = useState("");
@@ -306,11 +330,137 @@ const StudentChat = () => {
         role: "student",
         rollNo: "CS2024-042",
         department: "Computer Science & Engineering",
+        year: "3rd Year",
       };
     }
 
     setCurrentUser(userObj);
   }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      setProfileFormData({
+        name: currentUser.name || "Student",
+        department: currentUser.department || "Computer Science & Engineering",
+        year: currentUser.year || "3rd Year",
+        rollNo: currentUser.rollNo || "CS2024-042",
+      });
+    }
+  }, [currentUser]);
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setProfileSaving(true);
+    try {
+      const res = await api.auth.updateProfile(profileFormData);
+      if (res && res.success && res.user) {
+        const updated = { ...currentUser, ...res.user };
+        setCurrentUser(updated);
+        localStorage.setItem("campusai_user", JSON.stringify(updated));
+      } else {
+        const updated = { ...currentUser, ...profileFormData };
+        setCurrentUser(updated);
+        localStorage.setItem("campusai_user", JSON.stringify(updated));
+      }
+    } catch (err) {
+      const updated = { ...currentUser, ...profileFormData };
+      setCurrentUser(updated);
+      localStorage.setItem("campusai_user", JSON.stringify(updated));
+    } finally {
+      setProfileSaving(false);
+      setIsProfileModalOpen(false);
+    }
+  };
+
+  const handleOpenCalendarModal = (msg) => {
+    const text = msg.text || "";
+    const dateRegex = /\b(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2})\b/i;
+    const match = text.match(dateRegex);
+
+    let eventDate = new Date();
+    eventDate.setDate(eventDate.getDate() + 1);
+    let dateStr = eventDate.toISOString().split("T")[0];
+
+    if (match) {
+      const parsed = Date.parse(match[0] + " 2026");
+      if (!isNaN(parsed)) {
+        dateStr = new Date(parsed).toISOString().split("T")[0];
+      }
+    }
+
+    const lines = text.split("\n").filter((l) => l.trim().length > 0);
+    let title = "Campus Academic Schedule Event";
+    if (lines.length > 0) {
+      const firstClean = lines[0].replace(/[#*•_]/g, "").trim();
+      if (firstClean.length > 5 && firstClean.length < 50) title = firstClean;
+    }
+
+    setCalendarEvent({
+      title,
+      date: dateStr,
+      time: "09:30",
+      description: text.slice(0, 300) + "\n\nVerified via CampusAI Saarthi Copilot",
+    });
+  };
+
+  const handleExportGoogleCalendar = () => {
+    if (!calendarEvent) return;
+    const { title, date, time, description } = calendarEvent;
+    const cleanDate = date.replace(/-/g, "");
+    const cleanTime = (time || "09:30").replace(":", "") + "00";
+    const startDateTime = `${cleanDate}T${cleanTime}`;
+
+    const [hh, mm] = (time || "09:30").split(":").map(Number);
+    const endHh = String((hh + 2) % 24).padStart(2, "0");
+    const endDateTime = `${cleanDate}T${endHh}${String(mm).padStart(2, "0")}00`;
+
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+      title
+    )}&dates=${startDateTime}/${endDateTime}&details=${encodeURIComponent(
+      description
+    )}&location=${encodeURIComponent("College Campus")}`;
+
+    window.open(url, "_blank");
+  };
+
+  const handleDownloadICS = () => {
+    if (!calendarEvent) return;
+    const { title, date, time, description } = calendarEvent;
+    const cleanDate = date.replace(/-/g, "");
+    const cleanTime = (time || "09:30").replace(":", "") + "00";
+    const startDateTime = `${cleanDate}T${cleanTime}Z`;
+
+    const [hh, mm] = (time || "09:30").split(":").map(Number);
+    const endHh = String((hh + 2) % 24).padStart(2, "0");
+    const endDateTime = `${cleanDate}T${endHh}${String(mm).padStart(2, "0")}00Z`;
+
+    const icsContent = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//CampusAI//Academic Calendar Copilot//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      `UID:${Date.now()}@campusai.copilot`,
+      `DTSTAMP:${cleanDate}T000000Z`,
+      `DTSTART:${startDateTime}`,
+      `DTEND:${endDateTime}`,
+      `SUMMARY:${title.replace(/[\n\r]/g, " ")}`,
+      `DESCRIPTION:${description.replace(/[\n\r]/g, " ")}`,
+      "LOCATION:College Campus",
+      "STATUS:CONFIRMED",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+
+    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute("download", `${title.toLowerCase().replace(/[^a-z0-9]/g, "_")}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -353,6 +503,15 @@ const StudentChat = () => {
         studentName: currentUser?.name || "Student",
         sessionId,
         question: text,
+        userProfile: currentUser
+          ? {
+              name: currentUser.name,
+              role: currentUser.role,
+              department: currentUser.department,
+              year: currentUser.year,
+              rollNo: currentUser.rollNo,
+            }
+          : undefined,
       });
 
       if (response && response.success && response.data) {
@@ -516,11 +675,20 @@ const StudentChat = () => {
           <Search size={14} />
           <input
             type="text"
-            placeholder="Search chats"
+            placeholder="Search or ask anything..."
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && searchFilter.trim()) {
+                e.preventDefault();
+                const q = searchFilter.trim();
+                setSearchFilter("");
+                setActiveTab("home");
+                handleSendMessage(q);
+              }
+            }}
           />
-          <span className="axora-kbd-shortcut">⌘K</span>
+          <span className="axora-kbd-shortcut">↵</span>
         </div>
 
         {/* Main Navigation Items */}
@@ -560,6 +728,32 @@ const StudentChat = () => {
               </button>
             )}
           </div>
+          {searchFilter.trim() && (
+            <button
+              className="axora-history-item"
+              style={{
+                background: "rgba(79, 117, 255, 0.2)",
+                border: "1px solid rgba(79, 117, 255, 0.4)",
+                color: "#93c5fd",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontWeight: "600",
+                marginBottom: "6px",
+              }}
+              onClick={() => {
+                const q = searchFilter.trim();
+                setSearchFilter("");
+                setActiveTab("home");
+                handleSendMessage(q);
+              }}
+            >
+              <Search size={13} style={{ flexShrink: 0, color: "#60a5fa" }} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                Ask AI: "{searchFilter}"
+              </span>
+            </button>
+          )}
           {dynamicHistory
             .filter((item) => item.query.toLowerCase().includes(searchFilter.toLowerCase()))
             .map((item) => (
@@ -620,10 +814,25 @@ const StudentChat = () => {
       <main className="axora-main-content">
         {/* Top Navbar */}
         <header className="axora-top-header">
-          {/* Model Selector Dropdown */}
-          <div className="axora-model-selector">
-            <span>Saarthi Copilot</span>
-            <ChevronDown size={12} className="arrow" />
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            {/* Model Selector Dropdown */}
+            <div className="axora-model-selector">
+              <span>Saarthi Copilot</span>
+              <ChevronDown size={12} className="arrow" />
+            </div>
+
+            {/* Feature 1: Student Profile Context Chip */}
+            <div
+              className="student-profile-chip"
+              onClick={() => setIsProfileModalOpen(true)}
+              title="Click to personalize branch, year & roll number context"
+            >
+              <UserCheck size={13} style={{ color: "var(--chat-accent)" }} />
+              <span>
+                {currentUser?.name || "Student"} • {currentUser?.department || "Computer Science"} • {currentUser?.year || "3rd Year"}
+              </span>
+              <Edit3 size={11} className="edit-icon" />
+            </div>
           </div>
 
           {/* Right Action Icons */}
@@ -717,9 +926,18 @@ const StudentChat = () => {
                 <Search size={16} />
                 <input
                   type="text"
-                  placeholder="Search across your saved history..."
+                  placeholder="Search across history or type a question..."
                   value={historySearch}
                   onChange={(e) => setHistorySearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && historySearch.trim()) {
+                      e.preventDefault();
+                      const q = historySearch.trim();
+                      setHistorySearch("");
+                      setActiveTab("home");
+                      handleSendMessage(q);
+                    }
+                  }}
                 />
                 {historySearch && (
                   <button
@@ -742,20 +960,37 @@ const StudentChat = () => {
                 <div className="axora-history-empty-icon">
                   <Clock size={36} />
                 </div>
-                <h3>{historySearch ? "No Matching Inquiries" : "No Conversation History"}</h3>
+                <h3>{historySearch ? "No Past Inquiries Match This Query" : "No Conversation History"}</h3>
                 <p>
                   {historySearch
-                    ? `No past inquiries match "${historySearch}". Try another keyword or clear search.`
+                    ? `You haven't asked about "${historySearch}" before. Ask Saarthi AI right now to retrieve verified institutional answers!`
                     : "Your conversation queries and answers will appear here as you ask questions in Saarthi AI."}
                 </p>
-                <button
-                  type="button"
-                  className="axora-history-start-btn"
-                  onClick={() => setActiveTab("home")}
-                >
-                  <span>Start New Conversation</span>
-                  <ArrowRight size={15} />
-                </button>
+                {historySearch ? (
+                  <button
+                    type="button"
+                    className="axora-history-start-btn"
+                    style={{ background: "#4f75ff", color: "#ffffff" }}
+                    onClick={() => {
+                      const q = historySearch.trim();
+                      setHistorySearch("");
+                      setActiveTab("home");
+                      handleSendMessage(q);
+                    }}
+                  >
+                    <Sparkles size={15} />
+                    <span>Ask AI: "{historySearch}"</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="axora-history-start-btn"
+                    onClick={() => setActiveTab("home")}
+                  >
+                    <span>Start New Conversation</span>
+                    <ArrowRight size={15} />
+                  </button>
+                )}
               </div>
             ) : (
               <div className="axora-history-grid">
@@ -930,7 +1165,16 @@ const StudentChat = () => {
                         <>
                           {msg.isFoundInKnowledgeBase && msg.citations?.length > 0 ? (
                             msg.citations.map((cite, cIdx) => (
-                              <div key={cIdx} className="axora-citation-card">
+                              <div
+                                key={cIdx}
+                                className="axora-citation-card"
+                                onClick={() => {
+                                  setSelectedCitation(cite);
+                                  setCitationViewMode("highlight");
+                                }}
+                                style={{ cursor: "pointer" }}
+                                title="Click to open grounded excerpt and PDF document viewer"
+                              >
                                 <div className="axora-citation-meta">
                                   <div className="axora-citation-icon">
                                     <FileText size={15} />
@@ -949,8 +1193,9 @@ const StudentChat = () => {
                                   </div>
                                 </div>
 
-                                <div className="axora-citation-badge">
-                                  {cite.relevanceScore || 95}% Match
+                                <div className="axora-citation-badge" style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                                  <Eye size={12} />
+                                  <span>{cite.relevanceScore || 95}% Match</span>
                                 </div>
                               </div>
                             ))
@@ -991,6 +1236,16 @@ const StudentChat = () => {
                               title="Read response aloud"
                             >
                               <Volume2 size={12} />
+                            </button>
+
+                            {/* Feature 3: Add to Google / Outlook Calendar */}
+                            <button
+                              className="axora-action-btn calendar"
+                              onClick={() => handleOpenCalendarModal(msg)}
+                              title="Add schedule, holiday, or deadline to Google / Outlook Calendar"
+                            >
+                              <Calendar size={12} />
+                              <span>Add to Calendar</span>
                             </button>
 
                             <button
@@ -1143,6 +1398,283 @@ const StudentChat = () => {
               </form>
             </div>
           </>
+        )}
+
+        {/* ====================================================================
+            FEATURE 1: PERSONALIZED STUDENT PROFILE CONTEXT MODAL
+            ==================================================================== */}
+        {isProfileModalOpen && (
+          <div className="axora-modal-overlay" onClick={() => setIsProfileModalOpen(false)}>
+            <div className="axora-modal-box" onClick={(e) => e.stopPropagation()}>
+              <div className="axora-modal-header">
+                <h3>
+                  <UserCheck size={18} style={{ color: "var(--chat-accent)" }} />
+                  <span>Personalized Student Profile Context</span>
+                </h3>
+                <button className="axora-modal-close-btn" onClick={() => setIsProfileModalOpen(false)}>
+                  <X size={16} />
+                </button>
+              </div>
+              <form onSubmit={handleSaveProfile}>
+                <div className="axora-modal-body">
+                  <p style={{ fontSize: "12.5px", color: "var(--chat-text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                    Saarthi Copilot personalizes timetable schedules, exam rules, and attendance requirements specifically to your branch and academic year.
+                  </p>
+                  <div className="axora-form-group">
+                    <label>Student Full Name</label>
+                    <input
+                      type="text"
+                      className="axora-form-input"
+                      value={profileFormData.name}
+                      onChange={(e) => setProfileFormData({ ...profileFormData, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="axora-form-group">
+                    <label>Department / Engineering Branch</label>
+                    <select
+                      className="axora-form-select"
+                      value={profileFormData.department}
+                      onChange={(e) => setProfileFormData({ ...profileFormData, department: e.target.value })}
+                    >
+                      <option value="Computer Science & Engineering">Computer Science & Engineering (CSE)</option>
+                      <option value="Information Technology">Information Technology (IT)</option>
+                      <option value="Electronics & Telecommunication">Electronics & Telecommunication (ENTC)</option>
+                      <option value="Mechanical Engineering">Mechanical Engineering</option>
+                      <option value="Civil Engineering">Civil Engineering</option>
+                      <option value="Electrical Engineering">Electrical Engineering</option>
+                      <option value="Artificial Intelligence & Data Science">AI & Data Science (AIDS)</option>
+                      <option value="MBA & Management Studies">MBA & Management Studies</option>
+                    </select>
+                  </div>
+                  <div className="axora-form-group">
+                    <label>Academic Year</label>
+                    <select
+                      className="axora-form-select"
+                      value={profileFormData.year}
+                      onChange={(e) => setProfileFormData({ ...profileFormData, year: e.target.value })}
+                    >
+                      <option value="1st Year">1st Year (Freshman / FE)</option>
+                      <option value="2nd Year">2nd Year (Sophomore / SE)</option>
+                      <option value="3rd Year">3rd Year (Junior / TE)</option>
+                      <option value="4th Year">4th Year (Senior / BE)</option>
+                      <option value="Postgraduate">Postgraduate (M.Tech / MBA)</option>
+                    </select>
+                  </div>
+                  <div className="axora-form-group">
+                    <label>College Roll / PRN Number</label>
+                    <input
+                      type="text"
+                      className="axora-form-input"
+                      value={profileFormData.rollNo}
+                      placeholder="e.g. CS2024-042"
+                      onChange={(e) => setProfileFormData({ ...profileFormData, rollNo: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="axora-modal-footer">
+                  <button type="button" className="axora-btn-secondary" onClick={() => setIsProfileModalOpen(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="axora-btn-primary" disabled={profileSaving}>
+                    <Check size={14} />
+                    <span>{profileSaving ? "Saving..." : "Save Context"}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ====================================================================
+            FEATURE 2: VISUAL CITATION & PDF VIEWER MODAL
+            ==================================================================== */}
+        {selectedCitation && (
+          <div className="axora-modal-overlay" onClick={() => setSelectedCitation(null)}>
+            <div className="axora-modal-box axora-docviewer-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="axora-modal-header">
+                <h3>
+                  <FileText size={18} style={{ color: "var(--chat-accent)" }} />
+                  <span>{selectedCitation.source}</span>
+                  <span className="axora-doc-page-badge">
+                    {selectedCitation.page || "Page 1"}
+                  </span>
+                </h3>
+                <button className="axora-modal-close-btn" onClick={() => setSelectedCitation(null)}>
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="axora-docviewer-tabs">
+                <button
+                  className={`axora-docviewer-tab ${citationViewMode === "highlight" ? "active" : ""}`}
+                  onClick={() => setCitationViewMode("highlight")}
+                >
+                  <Eye size={13} />
+                  <span>Grounded Text Highlight</span>
+                </button>
+                <button
+                  className={`axora-docviewer-tab ${citationViewMode === "pdf" ? "active" : ""}`}
+                  onClick={() => setCitationViewMode("pdf")}
+                >
+                  <ExternalLink size={13} />
+                  <span>Official PDF Viewer</span>
+                </button>
+              </div>
+
+              <div className="axora-docviewer-body">
+                {citationViewMode === "highlight" ? (
+                  <div className="axora-doc-page-paper">
+                    <div className="axora-doc-page-header">
+                      <span>Section: {selectedCitation.section || "General Guidelines"} • Version v{selectedCitation.version || 1}</span>
+                      <span style={{ color: "#22c55e", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <ShieldCheck size={14} />
+                        Strict Grounded Excerpt
+                      </span>
+                    </div>
+
+                    <div className="axora-doc-bounding-box">
+                      <span className="axora-doc-bounding-label">Exact Source Paragraph</span>
+                      <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                        {selectedCitation.fullExcerpt || selectedCitation.snippet || "Relevant clause context retrieved from official document."}
+                      </p>
+                    </div>
+
+                    <div style={{ marginTop: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", color: "var(--chat-text-muted)" }}>
+                      <span>Relevance Match: {selectedCitation.relevanceScore || 95}%</span>
+                      {selectedCitation.documentId && (
+                        <a
+                          href={`http://localhost:5000/api/documents/${selectedCitation.documentId}/download`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ color: "var(--chat-accent)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                        >
+                          <Download size={13} />
+                          Download Official File
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="axora-doc-iframe-container">
+                    {selectedCitation.documentId ? (
+                      <iframe
+                        title="Document PDF Preview"
+                        src={`http://localhost:5000/api/documents/${selectedCitation.documentId}/file#page=${selectedCitation.pageNumber || 1}`}
+                        className="axora-doc-iframe"
+                      />
+                    ) : (
+                      <div style={{ padding: "40px", textAlign: "center", color: "var(--chat-text-muted)" }}>
+                        <p>Document preview loaded from institutional knowledge base.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="axora-modal-footer">
+                {selectedCitation.documentId && (
+                  <a
+                    href={`http://localhost:5000/api/documents/${selectedCitation.documentId}/file`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="axora-btn-secondary"
+                    style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <ExternalLink size={14} />
+                    <span>Open Full Document</span>
+                  </a>
+                )}
+                <button className="axora-btn-primary" onClick={() => setSelectedCitation(null)}>
+                  Close Preview
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ====================================================================
+            FEATURE 3: ADD TO GOOGLE / OUTLOOK CALENDAR MODAL
+            ==================================================================== */}
+        {calendarEvent && (
+          <div className="axora-modal-overlay" onClick={() => setCalendarEvent(null)}>
+            <div className="axora-modal-box" onClick={(e) => e.stopPropagation()}>
+              <div className="axora-modal-header">
+                <h3>
+                  <Calendar size={18} style={{ color: "#38bdf8" }} />
+                  <span>Add Schedule to Calendar</span>
+                </h3>
+                <button className="axora-modal-close-btn" onClick={() => setCalendarEvent(null)}>
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="axora-modal-body">
+                <p style={{ fontSize: "12.5px", color: "var(--chat-text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                  Export examination dates, holiday schedules, or submission deadlines directly to your personal Google Calendar or download an .ics file for Outlook/Apple Calendar.
+                </p>
+
+                <div className="axora-form-group">
+                  <label>Event Title</label>
+                  <input
+                    type="text"
+                    className="axora-form-input"
+                    value={calendarEvent.title}
+                    onChange={(e) => setCalendarEvent({ ...calendarEvent, title: e.target.value })}
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div className="axora-form-group">
+                    <label>Event Date</label>
+                    <input
+                      type="date"
+                      className="axora-form-input"
+                      value={calendarEvent.date}
+                      onChange={(e) => setCalendarEvent({ ...calendarEvent, date: e.target.value })}
+                    />
+                  </div>
+                  <div className="axora-form-group">
+                    <label>Event Time</label>
+                    <input
+                      type="time"
+                      className="axora-form-input"
+                      value={calendarEvent.time}
+                      onChange={(e) => setCalendarEvent({ ...calendarEvent, time: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="axora-form-group">
+                  <label>Description & Grounded Reference</label>
+                  <textarea
+                    className="axora-form-textarea"
+                    rows="3"
+                    value={calendarEvent.description}
+                    onChange={(e) => setCalendarEvent({ ...calendarEvent, description: e.target.value })}
+                  />
+                </div>
+
+                <div className="calendar-export-grid">
+                  <div className="calendar-export-btn" onClick={handleExportGoogleCalendar}>
+                    <Calendar size={22} style={{ color: "#4285F4" }} />
+                    <span className="title">Google Calendar</span>
+                    <span className="desc">Opens web event creator</span>
+                  </div>
+
+                  <div className="calendar-export-btn" onClick={handleDownloadICS}>
+                    <Download size={22} style={{ color: "#0078D4" }} />
+                    <span className="title">Outlook / Apple (.ics)</span>
+                    <span className="desc">Downloads .ics calendar file</span>
+                  </div>
+                </div>
+              </div>
+              <div className="axora-modal-footer">
+                <button className="axora-btn-secondary" onClick={() => setCalendarEvent(null)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
     </div>

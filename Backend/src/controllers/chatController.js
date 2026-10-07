@@ -18,6 +18,23 @@ const handleChatQuery = async (req, res) => {
 
     const userId = req.user?._id;
 
+    // Student profile context (from auth token or request body)
+    const userProfile = req.user
+      ? {
+          name: req.user.name,
+          role: req.user.role,
+          department: req.user.department || department,
+          year: req.user.year || req.body.year,
+          rollNo: req.user.rollNo || req.body.rollNo,
+        }
+      : req.body.userProfile || {
+          name: req.body.studentName || "Student",
+          role: "student",
+          department: department || req.body.department,
+          year: req.body.year,
+          rollNo: req.body.rollNo,
+        };
+
     // 1. Locate or create chat session
     let session;
     if (sessionId && mongoose.isValidObjectId(sessionId)) {
@@ -34,8 +51,8 @@ const handleChatQuery = async (req, res) => {
     // 2. Perform Hybrid Retrieval (Vector + BM25 + RRF + Re-ranking)
     const retrieval = await hybridRetrieve(message, {
       topK: 4,
-      department,
-      category,
+      department: department && department !== "All" ? department : undefined,
+      category: category && category !== "All" ? category : undefined,
     });
 
     let answerPayload;
@@ -50,8 +67,8 @@ const handleChatQuery = async (req, res) => {
         abstention: true,
       };
     } else {
-      // 4. Grounded Gemini Generation
-      answerPayload = await generateGroundedAnswer(message, retrieval.chunks);
+      // 4. Grounded Gemini Generation with Student Profile Context
+      answerPayload = await generateGroundedAnswer(message, retrieval.chunks, { userProfile });
     }
 
     // Append conflict note if two disparate documents disagree

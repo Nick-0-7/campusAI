@@ -31,6 +31,12 @@ const UserSchema = new mongoose.Schema(
     department: {
       type: String,
       trim: true,
+      default: "General",
+    },
+    year: {
+      type: String,
+      trim: true,
+      default: "1st Year",
     },
   },
   { timestamps: true }

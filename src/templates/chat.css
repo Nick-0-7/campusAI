@@ -72,7 +72,39 @@
   --chat-bot-bubble-border: #e4e6f0;
 }
 
-/* Base Layout */
+/* Base Layout & Clean Scrollbar Defaults */
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+[data-theme="light"] * {
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
 .axora-chat-container {
   display: flex;
   height: 100vh;
@@ -460,7 +492,7 @@
   justify-content: center;
   align-items: center;
   padding: 20px 24px 40px;
-  max-width: 860px;
+  max-width: min(96%, 1150px);
   width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
@@ -489,7 +521,7 @@
    ========================================================================== */
 .axora-input-container {
   width: 100%;
-  max-width: 860px;
+  max-width: min(96%, 1150px);
   margin: 0 auto 20px;
 }
 
@@ -622,7 +654,7 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 14px;
   width: 100%;
-  max-width: 860px;
+  max-width: min(96%, 1150px);
 }
 
 @media (max-width: 768px) {
@@ -670,13 +702,14 @@
 .axora-thread-container {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 24px 20px 10px;
   display: flex;
   flex-direction: column;
 }
 
 .axora-thread-inner {
-  max-width: 860px;
+  max-width: min(96%, 1320px);
   width: 100%;
   margin: 0 auto;
   display: flex;
@@ -689,6 +722,8 @@
   display: flex;
   gap: 14px;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .axora-msg-row.user {
@@ -738,8 +773,11 @@
   border-radius: 14px 14px 14px 2px;
   padding: 18px 22px;
   color: var(--chat-text-primary);
-  width: 100%;
+  flex: 1;
+  min-width: 0;
+  max-width: calc(100% - 46px);
   box-shadow: var(--chat-card-shadow);
+  box-sizing: border-box;
 }
 
 .axora-msg-text {
@@ -890,6 +928,12 @@
   flex-shrink: 0;
 }
 
+.axora-pinned-input-bar form {
+  max-width: min(96%, 1320px);
+  width: 100%;
+  margin: 0 auto;
+}
+
 /* ==========================================================================
    FORMATTED MARKDOWN BODY & TABLES
    ========================================================================== */
@@ -902,6 +946,7 @@
 
 .formatted-markdown-body {
   width: 100%;
+  white-space: normal;
 }
 
 .formatted-markdown-body p {
@@ -955,32 +1000,53 @@
   margin-bottom: 0;
 }
 
-/* Beautiful responsive tables */
-.formatted-markdown-body table {
+/* Beautiful responsive tables with scroll container */
+.formatted-markdown-body .table-wrapper {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  margin: 12px 0 16px 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 14px 0 18px 0;
   border-radius: 8px;
-  overflow: hidden;
   border: 1px solid var(--chat-border-main, rgba(255, 255, 255, 0.12));
   background: var(--chat-bg-surface, rgba(18, 18, 24, 0.7));
-  font-size: 12.5px;
-  display: block;
-  overflow-x: auto;
-  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+.formatted-markdown-body .table-wrapper::-webkit-scrollbar {
+  height: 5px;
+}
+
+.formatted-markdown-body .table-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.formatted-markdown-body .table-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+}
+
+.formatted-markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  margin: 0;
+  font-size: 13px;
+  display: table;
+  table-layout: auto;
+  white-space: normal;
 }
 
 .formatted-markdown-body thead {
-  background: rgba(85, 92, 224, 0.18);
+  background: rgba(85, 92, 224, 0.2);
 }
 
 .formatted-markdown-body th {
-  padding: 9px 12px;
+  padding: 10px 14px;
   text-align: left;
   font-weight: 700;
   color: #c7d2fe;
-  border-bottom: 1px solid var(--chat-border-main, rgba(255, 255, 255, 0.12));
+  border-bottom: 1px solid var(--chat-border-main, rgba(255, 255, 255, 0.14));
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 11.5px;
   text-transform: uppercase;
@@ -993,10 +1059,33 @@
 }
 
 .formatted-markdown-body td {
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   border-right: 1px solid rgba(255, 255, 255, 0.04);
   color: var(--chat-text-primary, #e2e8f0);
+  vertical-align: middle;
+  line-height: 1.45;
+}
+
+/* Row numbers / Sr No must never break across lines */
+.formatted-markdown-body th:first-child,
+.formatted-markdown-body td:first-child {
+  white-space: nowrap !important;
+  text-align: center;
+  min-width: 52px;
+  width: 52px;
+  font-weight: 700;
+  color: #93c5fd;
+}
+
+/* Department, Academic Year, and Placement Type columns keep clean nowrap */
+.formatted-markdown-body th:nth-child(3),
+.formatted-markdown-body td:nth-child(3),
+.formatted-markdown-body th:nth-child(4),
+.formatted-markdown-body td:nth-child(4),
+.formatted-markdown-body th:nth-child(5),
+.formatted-markdown-body td:nth-child(5) {
+  white-space: nowrap;
 }
 
 .formatted-markdown-body td:last-child {
@@ -1043,6 +1132,11 @@
   color: #0e1017;
 }
 
+[data-theme="light"] .formatted-markdown-body .table-wrapper {
+  background: #ffffff;
+  border-color: #e2e4ed;
+}
+
 [data-theme="light"] .formatted-markdown-body table {
   background: #ffffff;
   border-color: #e2e4ed;
@@ -1050,6 +1144,11 @@
 
 [data-theme="light"] .formatted-markdown-body thead {
   background: rgba(85, 92, 224, 0.09);
+}
+
+[data-theme="light"] .formatted-markdown-body th:first-child,
+[data-theme="light"] .formatted-markdown-body td:first-child {
+  color: #3b82f6;
 }
 
 [data-theme="light"] .formatted-markdown-body th {
@@ -1432,5 +1531,354 @@
   background: var(--chat-accent-hover);
   box-shadow: 0 4px 14px var(--chat-accent-glow);
   transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   FEATURE 1: PERSONALIZED STUDENT PROFILE CHIP & MODAL
+   ========================================================================== */
+.student-profile-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--chat-bg-chip);
+  border: 1px solid var(--chat-border-chip);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--chat-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.student-profile-chip:hover {
+  background: var(--chat-bg-chip-hover);
+  border-color: var(--chat-accent);
+  color: var(--chat-text-primary);
+  transform: translateY(-1px);
+}
+
+.student-profile-chip .edit-icon {
+  color: var(--chat-accent);
+}
+
+/* Generic Modal Overlay */
+.axora-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 5, 10, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeInModal 0.2s ease-out;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.axora-modal-box {
+  background: var(--chat-bg-surface);
+  border: 1px solid var(--chat-border-main);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.axora-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--chat-border-main);
+}
+
+.axora-modal-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--chat-text-heading);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.axora-modal-close-btn {
+  background: none;
+  border: none;
+  color: var(--chat-text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: color 0.2s;
+}
+
+.axora-modal-close-btn:hover {
+  color: var(--chat-text-primary);
+  background: var(--chat-bg-surface-hover);
+}
+
+.axora-modal-body {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.axora-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.axora-form-group label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--chat-text-secondary);
+}
+
+.axora-form-input,
+.axora-form-select,
+.axora-form-textarea {
+  background: var(--chat-bg-input);
+  border: 1px solid var(--chat-border-main);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  color: var(--chat-text-primary);
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.axora-form-input:focus,
+.axora-form-select:focus,
+.axora-form-textarea:focus {
+  border-color: var(--chat-accent);
+  box-shadow: 0 0 0 3px var(--chat-accent-glow);
+}
+
+.axora-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  background: var(--chat-bg-surface-hover);
+  border-top: 1px solid var(--chat-border-main);
+}
+
+.axora-btn-secondary {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--chat-border-main);
+  background: var(--chat-bg-surface);
+  color: var(--chat-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.axora-btn-primary {
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: none;
+  background: var(--chat-accent);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.axora-btn-primary:hover {
+  background: var(--chat-accent-hover);
+  box-shadow: 0 4px 14px var(--chat-accent-glow);
+}
+
+/* ==========================================================================
+   FEATURE 2: VISUAL CITATION & PDF VIEWER MODAL
+   ========================================================================== */
+.axora-docviewer-modal {
+  max-width: min(96%, 1150px);
+  width: 95vw;
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.axora-docviewer-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 10px 24px;
+  background: var(--chat-bg-surface);
+  border-bottom: 1px solid var(--chat-border-main);
+}
+
+.axora-docviewer-tab {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--chat-text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.axora-docviewer-tab.active {
+  background: var(--chat-bg-chip);
+  border-color: var(--chat-border-chip);
+  color: var(--chat-text-primary);
+  font-weight: 600;
+}
+
+.axora-docviewer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.axora-doc-page-paper {
+  background: var(--chat-bg-input);
+  border: 1px solid var(--chat-border-main);
+  border-radius: 10px;
+  padding: 20px 24px;
+  position: relative;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.axora-doc-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px dashed var(--chat-border-main);
+  font-size: 12px;
+  color: var(--chat-text-muted);
+}
+
+.axora-doc-page-badge {
+  background: rgba(85, 92, 224, 0.15);
+  color: var(--chat-accent);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.axora-doc-bounding-box {
+  background: rgba(34, 197, 94, 0.08);
+  border: 2px solid #22c55e;
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.2);
+  border-radius: 8px;
+  padding: 18px 20px;
+  line-height: 1.65;
+  font-size: 14px;
+  color: var(--chat-text-primary);
+  position: relative;
+}
+
+.axora-doc-bounding-label {
+  position: absolute;
+  top: -11px;
+  left: 14px;
+  background: #22c55e;
+  color: #0c0d12;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.axora-doc-iframe-container {
+  width: 100%;
+  height: 100%;
+  min-height: 480px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--chat-border-main);
+  background: #ffffff;
+}
+
+.axora-doc-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* ==========================================================================
+   FEATURE 3: ADD TO GOOGLE / OUTLOOK CALENDAR ACTION
+   ========================================================================== */
+.axora-action-btn.calendar {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.25);
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.axora-action-btn.calendar:hover {
+  background: rgba(56, 189, 248, 0.18);
+  color: #7dd3fc;
+  border-color: #38bdf8;
+}
+
+.calendar-export-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.calendar-export-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--chat-border-main);
+  background: var(--chat-bg-surface-hover);
+  color: var(--chat-text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.calendar-export-btn:hover {
+  border-color: var(--chat-accent);
+  background: var(--chat-bg-chip-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+.calendar-export-btn span.title {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.calendar-export-btn span.desc {
+  font-size: 11px;
+  color: var(--chat-text-muted);
 }
 

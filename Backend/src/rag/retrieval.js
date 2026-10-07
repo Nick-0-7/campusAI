@@ -72,8 +72,12 @@ const hybridRetrieve = async (query, options = {}) => {
   }
 
   const filter = { documentId: { $in: activeDocIds } };
-  if (options.department && options.department !== "All") filter.department = options.department;
-  if (options.category && options.category !== "All") filter.category = options.category;
+  if (options.department && options.department !== "All" && options.department !== "General") {
+    filter.department = { $in: [options.department, "All", "All Departments", "General", "Academic Affairs"] };
+  }
+  if (options.category && options.category !== "All" && options.category !== "General") {
+    filter.category = { $in: [options.category, "All", "General"] };
+  }
 
   const candidateChunks = await DocumentChunk.find(filter).lean();
   if (candidateChunks.length === 0) {
@@ -109,6 +113,18 @@ const hybridRetrieve = async (query, options = {}) => {
     }
     if (/\btimetable\b|\btime-table\b|\btime table\b/i.test(q)) {
       q += " schedule academic calendar dates";
+    }
+    if (/\bevent\b|\bevents\b|\bgathering\b|\bsports\b|\bfest\b|\bactivity\b|\bactivities\b/i.test(q)) {
+      q += " annual sports gathering events activities academic schedule calendar";
+    }
+    if (/\bsyllabus\b|\bcourse\b|\bcourses\b|\bsubject\b|\bsubjects\b|\bcurriculum\b/i.test(q)) {
+      q += " course structure syllabus scheme credits teaching examination units";
+    }
+    if (/\bplacement\b|\bplacements\b|\bjob\b|\bpackage\b|\bsalary\b|\bcompany\b/i.test(q)) {
+      q += " placement data campus recruitment offers company highest package";
+    }
+    if (/\bexam\b|\bexams\b|\btest\b|\bevaluation\b|\bassessment\b/i.test(q)) {
+      q += " examination evaluation assessment continuous assessment ca mid semester end semester";
     }
     return q;
   }

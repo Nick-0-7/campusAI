@@ -66,9 +66,18 @@ export const api = {
       });
       return res.json();
     },
+
+    updateProfile: async (profileData) => {
+      const res = await fetch(`${API_BASE_URL}/auth/profile`, {
+        method: "PUT",
+        headers: getHeaders(),
+        body: JSON.stringify(profileData),
+      });
+      return res.json();
+    },
   },
 
-  // Faculty Documents
+  // Faculty & Institutional Documents
   documents: {
     upload: async (formData) => {
       const res = await fetch(`${API_BASE_URL}/documents/upload`, {
@@ -114,7 +123,6 @@ export const api = {
         // Fallback to synthesizing from /documents
       }
 
-      // Compute stats dynamically if /stats is unavailable
       try {
         const docsRes = await fetch(`${API_BASE_URL}/documents`, {
           method: "GET",
@@ -145,9 +153,37 @@ export const api = {
       }
     },
 
+    getDetails: async (id) => {
+      const res = await fetch(`${API_BASE_URL}/documents/${id}`, {
+        method: "GET",
+        headers: getHeaders(),
+      });
+      return res.json();
+    },
+
+    getFileUrl: (id) => `${API_BASE_URL}/documents/${id}/file`,
+    getDownloadUrl: (id) => `${API_BASE_URL}/documents/${id}/download`,
+
     delete: async (id) => {
       const res = await fetch(`${API_BASE_URL}/documents/${id}`, {
         method: "DELETE",
+        headers: getHeaders(),
+      });
+      return res.json();
+    },
+
+    reprocess: async (id) => {
+      const res = await fetch(`${API_BASE_URL}/documents/${id}/reprocess`, {
+        method: "POST",
+        headers: getHeaders(),
+      });
+      return res.json();
+    },
+
+    compare: async (params) => {
+      const query = new URLSearchParams(params).toString();
+      const res = await fetch(`${API_BASE_URL}/documents/compare?${query}`, {
+        method: "GET",
         headers: getHeaders(),
       });
       return res.json();
@@ -156,35 +192,15 @@ export const api = {
 
   // Student Chat / Copilot
   chat: {
-    sendQuery: async ({ studentId, studentName, sessionId, question }) => {
-      // 1. First attempt to call /chat/query
-      try {
-        const res = await fetch(`${API_BASE_URL}/chat/query`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            studentId,
-            studentName,
-            sessionId,
-            question,
-          }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.success) return data;
-        }
-      } catch (e) {
-        // Continue to /chat fallback
-      }
-
-      // 2. Call standard RAG endpoint /chat with message & sessionId
+    sendQuery: async ({ studentId, studentName, sessionId, question, userProfile }) => {
+      // Direct call to RAG endpoint /chat with message, sessionId, and userProfile
       const res = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
         headers: getHeaders(),
         body: JSON.stringify({
           message: question,
           sessionId: sessionId && !sessionId.startsWith("session-") ? sessionId : undefined,
+          userProfile,
         }),
       });
 
@@ -194,11 +210,17 @@ export const api = {
         throw new Error(data.message || "Failed to process question");
       }
 
-      // Transform backend RAG payload to match friend's StudentChat schema
+      // Transform backend RAG payload with full citation intelligence
       const citations = (data.sources || []).map((s) => ({
-        source: s.documentTitle || s.source || "Institutional Document",
-        page: s.pageNumber ? `Page ${s.pageNumber}` : (s.page || "Page 1"),
+        source: s.document || s.documentTitle || s.source || "Institutional Document",
+        documentId: s.documentId || null,
+        fileName: s.fileName || "",
+        page: s.pageNumber ? `Page ${s.pageNumber}` : (s.page ? `Page ${s.page}` : "Page 1"),
+        pageNumber: s.pageNumber || (s.page ? Number(s.page) : 1),
         section: s.section || "General Guidelines",
+        snippet: s.snippet || "",
+        fullExcerpt: s.fullExcerpt || s.snippet || "",
+        version: s.version || 1,
         relevanceScore: Math.round((s.confidence || data.confidence || 0.95) * 100),
       }));
 
@@ -212,6 +234,8 @@ export const api = {
           citations,
           isFoundInKnowledgeBase: isFound,
           confidence: data.confidence,
+          conflictDetected: data.conflictDetected,
+          conflictNote: data.conflictNote,
         },
       };
     },
@@ -227,9 +251,7 @@ export const api = {
           headers: getHeaders(),
         });
         if (res.ok) return await res.json();
-      } catch (e) {
-        // Fallback
-      }
+      } catch (e) {}
 
       const res = await fetch(`${API_BASE_URL}/chat/sessions`, {
         method: "GET",
@@ -251,17 +273,6 @@ export const api = {
     },
 
     sendFeedback: async (chatId, feedback) => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/chat/feedback`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({ chatId, feedback }),
-        });
-        if (res.ok) return await res.json();
-      } catch (e) {
-        // Fallback to /feedback endpoint
-      }
-
       const res = await fetch(`${API_BASE_URL}/feedback`, {
         method: "POST",
         headers: getHeaders(),
@@ -274,4 +285,19 @@ export const api = {
       return res.json();
     },
   },
+
+  // Top-level aliases for Admin & other components
+  listDocuments: async (params) => api.documents.getAll(params),
+  getAdminStats: async () => {
+    const res = await fetch(`${API_BASE_URL}/feedback/stats`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    return res.json();
+  },
+  uploadDocument: async (formData) => api.documents.upload(formData),
+  deleteDocument: async (id) => api.documents.delete(id),
+  reprocessDocument: async (id) => api.documents.reprocess(id),
+  getDocumentDetails: async (id) => api.documents.getDetails(id),
+  compareDocuments: async (params) => api.documents.compare(params),
 };

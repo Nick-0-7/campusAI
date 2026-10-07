@@ -37,6 +37,17 @@ const Admin = () => {
   const [inspectedErrorDoc, setInspectedErrorDoc] = useState(null);
   const [reprocessingId, setReprocessingId] = useState(null);
 
+  // Feature 7: Knowledge Gap & Query Topic Analytics
+  const [topicDistribution, setTopicDistribution] = useState({});
+  const [knowledgeGaps, setKnowledgeGaps] = useState([]);
+
+  // Feature 4: Policy Version Comparison / Diff Analyzer State
+  const [isDiffModalOpen, setIsDiffModalOpen] = useState(false);
+  const [diffDoc1, setDiffDoc1] = useState("");
+  const [diffDoc2, setDiffDoc2] = useState("");
+  const [diffLoading, setDiffLoading] = useState(false);
+  const [diffResult, setDiffResult] = useState(null);
+
   useEffect(() => {
     // Auth & Role check
     const token = localStorage.getItem("campusai_token");
@@ -65,13 +76,48 @@ const Admin = () => {
         api.getAdminStats(),
       ]);
 
-      if (docsRes.documents) setDocuments(docsRes.documents);
+      if (docsRes.documents) {
+        setDocuments(docsRes.documents);
+        if (docsRes.documents.length >= 2) {
+          setDiffDoc1(docsRes.documents[0]._id);
+          setDiffDoc2(docsRes.documents[1]._id);
+        } else if (docsRes.documents.length === 1) {
+          setDiffDoc1(docsRes.documents[0]._id);
+          setDiffDoc2(docsRes.documents[0]._id);
+        }
+      }
       if (statsRes.stats) setStats(statsRes.stats);
+      if (statsRes.topicDistribution) setTopicDistribution(statsRes.topicDistribution);
+      if (statsRes.knowledgeGaps) setKnowledgeGaps(statsRes.knowledgeGaps);
     } catch (err) {
       console.warn("Failed to load admin dashboard data:", err);
     } finally {
       setLoadingDocs(false);
     }
+  };
+
+  const handleRunDiff = async () => {
+    if (!diffDoc1) return;
+    setDiffLoading(true);
+    setDiffResult(null);
+    try {
+      const res = await api.compareDocuments({ doc1Id: diffDoc1, doc2Id: diffDoc2 });
+      if (res && res.success && res.comparison) {
+        setDiffResult(res.comparison);
+      } else {
+        alert(res?.message || "Failed to analyze policy comparison");
+      }
+    } catch (err) {
+      alert("Error analyzing policy comparison: " + err.message);
+    } finally {
+      setDiffLoading(false);
+    }
+  };
+
+  const handlePrefillGapUpload = (gap) => {
+    setTitle(gap.recommendedDoc.replace(/\.[^/.]+$/, ""));
+    setCategory("General");
+    window.scrollTo({ top: 400, behavior: "smooth" });
   };
 
   const handleFileChange = (e) => {
@@ -173,6 +219,13 @@ const Admin = () => {
         </div>
 
         <div className="admin-actions">
+          <button
+            className="admin-nav-btn"
+            style={{ borderColor: "#555ce0", color: "#a5b4fc" }}
+            onClick={() => setIsDiffModalOpen(true)}
+          >
+            ⚖️ Policy Diff Analyzer
+          </button>
           <button className="admin-nav-btn" onClick={() => navigate("/chat")}>
             Student Chat View ↗
           </button>
@@ -219,6 +272,76 @@ const Admin = () => {
             <span className="stat-meta">
               👍 {stats.positiveFeedback} &nbsp; 👎 {stats.negativeFeedback}
             </span>
+          </div>
+        </div>
+
+        {/* ====================================================================
+            FEATURE 7: INSTITUTIONAL INQUIRIES HEATMAP & KNOWLEDGE GAPS
+            ==================================================================== */}
+        <div className="admin-analytics-grid">
+          {/* Left: Topic Popularity Heatmap */}
+          <div className="admin-card">
+            <h2 className="card-title">Institutional Inquiries Heatmap</h2>
+            <p className="card-subtitle">
+              Live topic volume distribution from campus student queries
+            </p>
+            <div className="topic-heatmap-list">
+              {Object.entries(topicDistribution).length > 0 ? (
+                Object.entries(topicDistribution).map(([topic, count], idx) => {
+                  const maxVal = Math.max(...Object.values(topicDistribution), 1);
+                  const pct = Math.round((count / maxVal) * 100);
+                  return (
+                    <div key={idx} className="topic-heatmap-item">
+                      <div className="topic-label-row">
+                        <span>{topic}</span>
+                        <span>{count} inquiries</span>
+                      </div>
+                      <div className="topic-progress-bar">
+                        <div className="topic-progress-fill" style={{ width: `${Math.max(pct, 12)}%` }} />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ color: "#8c8d98", fontSize: "13px", padding: "10px 0" }}>
+                  Analyzing student query trends...
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Actionable Knowledge Gaps */}
+          <div className="admin-card">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 className="card-title">Actionable Knowledge Gaps</h2>
+              <span className="gap-badge High">
+                {knowledgeGaps.length} Missing Topics
+              </span>
+            </div>
+            <p className="card-subtitle">
+              Student questions that resulted in "No Evidence" abstention. Uploading recommended circulars will resolve these gaps.
+            </p>
+
+            <div className="knowledge-gap-cards">
+              {knowledgeGaps.map((gap, idx) => (
+                <div key={idx} className="gap-card">
+                  <div className="gap-card-header">
+                    <span className="gap-card-title">{gap.topic}</span>
+                    <span className={`gap-badge ${gap.urgency}`}>{gap.urgency} Priority</span>
+                  </div>
+                  <p className="gap-query-sample">"{gap.sampleQuery}"</p>
+                  <div className="gap-card-footer">
+                    <span>Target: <strong>{gap.recommendedDoc}</strong></span>
+                    <button
+                      className="gap-upload-action"
+                      onClick={() => handlePrefillGapUpload(gap)}
+                    >
+                      + Upload This File
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -453,6 +576,16 @@ const Admin = () => {
                             </button>
                           )}
                           <button
+                            className="table-btn"
+                            title="Compare this policy version with another document"
+                            onClick={() => {
+                              setDiffDoc1(doc._id);
+                              setIsDiffModalOpen(true);
+                            }}
+                          >
+                            ⚖️ Diff
+                          </button>
+                          <button
                             className="table-btn delete"
                             onClick={() => handleDelete(doc._id)}
                           >
@@ -608,6 +741,155 @@ const Admin = () => {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          FEATURE 4: POLICY VERSION DIFF ANALYZER MODAL
+          ==================================================================== */}
+      {isDiffModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsDiffModalOpen(false)}>
+          <div className="diff-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span>⚖️</span>
+                <span>Policy Version Comparison & Diff Analyzer</span>
+              </div>
+              <button className="modal-close-btn" onClick={() => setIsDiffModalOpen(false)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="diff-modal-body">
+              <p style={{ fontSize: "12.5px", color: "#a0a1ae", margin: 0 }}>
+                Compare two institutional policies or document versions side-by-side. Gemini AI cross-references clauses to extract added regulations, modified dates/thresholds, and impact on students & faculty.
+              </p>
+
+              <div className="diff-selector-row">
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontSize: "12px", color: "#8c8d98" }}>Document A (Base Version)</label>
+                  <select
+                    className="form-select"
+                    value={diffDoc1}
+                    onChange={(e) => setDiffDoc1(e.target.value)}
+                  >
+                    {documents.map((d) => (
+                      <option key={d._id} value={d._id}>
+                        {d.title} (v{d.currentVersion})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontSize: "12px", color: "#8c8d98" }}>Document B (Revised Version)</label>
+                  <select
+                    className="form-select"
+                    value={diffDoc2}
+                    onChange={(e) => setDiffDoc2(e.target.value)}
+                  >
+                    {documents.map((d) => (
+                      <option key={d._id} value={d._id}>
+                        {d.title} (v{d.currentVersion})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  className="upload-submit-btn"
+                  style={{ padding: "10px 18px", marginTop: 0 }}
+                  onClick={handleRunDiff}
+                  disabled={diffLoading || !diffDoc1}
+                >
+                  {diffLoading ? "Analyzing Diff..." : "Run Policy Diff"}
+                </button>
+              </div>
+
+              {diffResult && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  {/* Executive Summary */}
+                  <div className="diff-section-box">
+                    <div className="diff-section-title" style={{ color: "#a5b4fc" }}>
+                      📋 Executive Summary of Changes
+                    </div>
+                    <p style={{ fontSize: "13.5px", color: "#e2e8f0", lineHeight: 1.5, margin: 0 }}>
+                      {diffResult.diff.summary}
+                    </p>
+                  </div>
+
+                  {/* Additions (+) */}
+                  {diffResult.diff.additions?.length > 0 && (
+                    <div className="diff-section-box">
+                      <div className="diff-section-title" style={{ color: "#22c55e" }}>
+                        (+) Added Policies & New Provisions
+                      </div>
+                      {diffResult.diff.additions.map((item, idx) => (
+                        <div key={idx} className="diff-item added">
+                          + {item}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Modifications (Δ) */}
+                  {diffResult.diff.modifications?.length > 0 && (
+                    <div className="diff-section-box">
+                      <div className="diff-section-title" style={{ color: "#f59e0b" }}>
+                        (Δ) Modified Deadlines, Fees & Clauses
+                      </div>
+                      {diffResult.diff.modifications.map((item, idx) => (
+                        <div key={idx} className="diff-item modified">
+                          Δ {item}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Deletions (-) */}
+                  {diffResult.diff.deletions?.length > 0 && (
+                    <div className="diff-section-box">
+                      <div className="diff-section-title" style={{ color: "#ef4444" }}>
+                        (-) Removed or Relaxed Regulations
+                      </div>
+                      {diffResult.diff.deletions.map((item, idx) => (
+                        <div key={idx} className="diff-item deleted">
+                          - {item}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Impact Grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div className="diff-section-box">
+                      <div className="diff-section-title" style={{ color: "#38bdf8" }}>
+                        🎓 Student Impact
+                      </div>
+                      <p style={{ fontSize: "12.5px", color: "#cbd5e1", margin: 0, lineHeight: 1.5 }}>
+                        {diffResult.diff.studentImpact}
+                      </p>
+                    </div>
+
+                    <div className="diff-section-box">
+                      <div className="diff-section-title" style={{ color: "#c084fc" }}>
+                        🏛️ Faculty & Admin Directives
+                      </div>
+                      <p style={{ fontSize: "12.5px", color: "#cbd5e1", margin: 0, lineHeight: 1.5 }}>
+                        {diffResult.diff.facultyImpact}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer" style={{ borderTop: "1px solid #1e202b", padding: "14px 20px" }}>
+              <button className="table-btn" onClick={() => setIsDiffModalOpen(false)}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

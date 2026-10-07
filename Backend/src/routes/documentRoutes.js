@@ -11,15 +11,23 @@ const {
   deleteDocument,
   reprocessDocument,
   downloadDocument,
+  viewDocumentFile,
+  compareDocumentVersions,
 } = require("../controllers/documentController");
 
 // Public/Read: Knowledge statistics and document listing
 router.get("/", optionalAuthenticate, listDocuments);
 router.get("/stats", optionalAuthenticate, getDocumentStats);
-router.get("/:id", optionalAuthenticate, getDocumentById);
 
-// Authenticated file download
-router.get("/:id/download", authenticate, downloadDocument);
+// Policy diff & version comparison (Features 4)
+router.get("/compare", optionalAuthenticate, compareDocumentVersions);
+router.post("/compare", optionalAuthenticate, compareDocumentVersions);
+
+// File viewing & citations download (Features 2)
+router.get("/:id/file", optionalAuthenticate, viewDocumentFile);
+router.get("/:id/download", optionalAuthenticate, downloadDocument);
+router.get("/:id/diff", optionalAuthenticate, compareDocumentVersions);
+router.get("/:id", optionalAuthenticate, getDocumentById);
 
 // Role-protected Document management (Faculty / Admin only)
 router.post(

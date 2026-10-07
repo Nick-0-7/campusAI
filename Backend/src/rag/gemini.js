@@ -5,7 +5,8 @@ const ABSTENTION_MESSAGE = "Information not found in the institutional knowledge
 /**
  * Builds the strict grounded context prompt for Gemini.
  */
-function buildGroundedPrompt(question, retrievedChunks) {
+function buildGroundedPrompt(question, retrievedChunks, options = {}) {
+  const { userProfile } = options;
   const contextBlocks = retrievedChunks
     .map((chunk, idx) => {
       return `[SOURCE ${idx + 1}]
@@ -19,9 +20,19 @@ ${chunk.content}
     })
     .join("\n\n");
 
-  return `You are CampusAI, an institutional knowledge assistant for our college campus.
-Your core principle is: "No Evidence → No Answer".
+  const studentContext =
+    userProfile && (userProfile.role === "student" || userProfile.department || userProfile.year)
+      ? `\nSTUDENT PROFILE CONTEXT:
+- Name: ${userProfile.name || "Student"}
+- Department / Branch: ${userProfile.department || "General"}
+- Academic Year: ${userProfile.year || "All Years"}
+- Roll Number: ${userProfile.rollNo || "N/A"}
+Instruction: When addressing rules, curriculum, timetables, or attendance, personalize your explanation for this student's department (${userProfile.department || "their branch"}) and year (${userProfile.year || "their year"}), while remaining strictly grounded in the retrieved sources below.\n`
+      : "";
 
+  return `You are Saarthi AI (CampusAI), an institutional knowledge assistant for our college campus.
+Your core principle is: "No Evidence → No Answer".
+${studentContext}
 CRITICAL INSTRUCTIONS:
 1. Answer factually using the facts explicitly stated in the RETRIEVED SOURCES below.
 2. For dates, schedules, academic calendars, and holiday inquiries:
@@ -30,8 +41,9 @@ CRITICAL INSTRUCTIONS:
    - If specific holidays are declared (e.g., Oct 2 - Mahatma Gandhi Jayanti, Oct 20 - Dashahara) and the inquired date is NOT among them, explicitly inform the student:
      a) Whether that date is a holiday or a regular academic working day.
      b) Which specific holidays are officially declared for that month according to the source.
-3. If the sources mention related policies or regulations but do NOT contain a specific detail requested by the student (e.g., specific fee amount, specific date), explicitly state what the document specifies and clarify that the specific detail is not mentioned in the retrieved documents.
-4. If the retrieved sources do NOT contain enough relevant context to address the question at all, answer EXACTLY:
+3. If the student provides a brief or single-word keyword (e.g., "Event", "Events", "Sports", "Exam", "Placement", "Attendance", "Syllabus"), treat it as a general institutional inquiry and provide a comprehensive, organized overview of all relevant schedules, policies, events, or guidelines related to that topic found in the retrieved sources.
+4. If the sources mention related policies or regulations but do NOT contain a specific detail requested by the student (e.g., specific fee amount, specific date), explicitly state what the document specifies and clarify that the specific detail is not mentioned in the retrieved documents.
+5. If the retrieved sources do NOT contain enough relevant context to address the question at all, answer EXACTLY:
 "${ABSTENTION_MESSAGE}"
 5. Format your answer cleanly, aesthetically, and professionally using structured Markdown:
    - Use bold section titles (e.g., **Academic Schedule**, **Holiday Status**, **Evaluation Guidelines**).
@@ -77,9 +89,12 @@ const generateGroundedAnswer = async (question, retrievedChunks, options = {}) =
   // Filter sources to attach to the final citation
   const formattedSources = retrievedChunks.map((c) => ({
     document: c.documentTitle || c.fileName,
+    documentId: c.documentId ? c.documentId.toString() : null,
+    fileName: c.fileName || "",
     page: c.pageNumber || 1,
     section: c.section || "General",
-    snippet: (c.content || "").slice(0, 160) + "...",
+    snippet: (c.content || "").slice(0, 200) + "...",
+    fullExcerpt: (c.content || "").slice(0, 800),
     confidence: c.confidence || 0.8,
     version: c.version || 1,
   }));
@@ -110,7 +125,7 @@ const generateGroundedAnswer = async (question, retrievedChunks, options = {}) =
                 maxOutputTokens: 2000,
               },
             });
-            const prompt = buildGroundedPrompt(question, retrievedChunks);
+            const prompt = buildGroundedPrompt(question, retrievedChunks, options);
             const result = await model.generateContent(prompt);
             const response = await result.response;
             text = response.text().trim();
