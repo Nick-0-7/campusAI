@@ -39,8 +39,8 @@ const Admin = () => {
 
   useEffect(() => {
     // Auth & Role check
-    const token = localStorage.getItem("campus_token");
-    const stored = localStorage.getItem("campus_user");
+    const token = localStorage.getItem("campusai_token");
+    const stored = localStorage.getItem("campusai_user");
 
     if (!token || !stored) {
       navigate("/login");
@@ -157,8 +157,8 @@ const Admin = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("campus_token");
-    localStorage.removeItem("campus_user");
+    localStorage.removeItem("campusai_token");
+    localStorage.removeItem("campusai_user");
     navigate("/login");
   };
 
@@ -257,8 +257,8 @@ const Admin = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      localStorage.removeItem("campus_token");
-                      localStorage.removeItem("campus_user");
+                      localStorage.removeItem("campusai_token");
+                      localStorage.removeItem("campusai_user");
                       navigate("/login");
                     }}
                     style={{

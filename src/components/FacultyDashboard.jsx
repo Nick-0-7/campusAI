@@ -108,17 +108,25 @@ const FacultyDashboard = () => {
 
   // Load user & documents
   useEffect(() => {
+    const token = localStorage.getItem("campusai_token");
     const userJson = localStorage.getItem("campusai_user");
-    if (userJson) {
-      try {
-        const parsed = JSON.parse(userJson);
-        setCurrentUser(parsed);
-      } catch (e) {
-        console.error("User parse error", e);
+    if (!token || !userJson) {
+      navigate("/login");
+      return;
+    }
+    try {
+      const parsed = JSON.parse(userJson);
+      if (parsed.role !== "faculty" && parsed.role !== "admin") {
+        navigate("/chat");
+        return;
       }
+      setCurrentUser(parsed);
+    } catch (e) {
+      navigate("/login");
+      return;
     }
     fetchDocumentsAndStats();
-  }, []);
+  }, [navigate]);
 
   const fetchDocumentsAndStats = async () => {
     setLoading(true);

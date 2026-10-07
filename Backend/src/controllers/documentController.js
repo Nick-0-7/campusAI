@@ -315,6 +315,21 @@ const getDocumentStats = async (req, res) => {
   }
 };
 
+const downloadDocument = async (req, res) => {
+  try {
+    const doc = await Document.findById(req.params.id);
+    if (!doc) return res.status(404).json({ message: "Document not found" });
+
+    if (!doc.filePath || !fs.existsSync(doc.filePath)) {
+      return res.status(404).json({ message: "Physical document file not found on disk" });
+    }
+
+    return res.download(doc.filePath, doc.fileName || path.basename(doc.filePath));
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   uploadDocument,
   listDocuments,
@@ -323,5 +338,6 @@ module.exports = {
   updateDocumentVersion,
   deleteDocument,
   reprocessDocument,
+  downloadDocument,
   processDocumentRAG,
 };

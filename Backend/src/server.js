@@ -10,16 +10,43 @@ const chatRoutes = require("./routes/chatRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const User = require("./models/User");
 
+const rateLimit = require("express-rate-limit");
+
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Rate limiters to prevent DoS, brute-force, and API quota exhaustion
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 400,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests from this IP, please try again later." },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 25,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many login/registration attempts. Please try again after 15 minutes." },
+});
+
+const chatLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Chat rate limit reached. Please wait a moment before asking another question." },
+});
 
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Static uploads directory
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+// General API rate limiter
+app.use("/api", apiLimiter);
 
 // Root status route
 app.get("/", (req, res) => {
@@ -38,10 +65,10 @@ app.get("/", (req, res) => {
   });
 });
 
-// API Routes
-app.use("/api/auth", authRoutes);
+// API Routes with specialized rate limiting
+app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/documents", documentRoutes);
-app.use("/api/chat", chatRoutes);
+app.use("/api/chat", chatLimiter, chatRoutes);
 app.use("/api/feedback", feedbackRoutes);
 
 // Health check endpoint
@@ -81,8 +108,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Seed default users if empty (for demo convenience)
+// Seed default users if empty (for demo/development convenience only)
 const seedDefaultAccounts = async () => {
+  if (process.env.NODE_ENV === "production" && process.env.ENABLE_SEED !== "true") {
+    return;
+  }
   try {
     const adminExists = await User.findOne({ email: "admin@campus.edu" });
     if (!adminExists) {
@@ -93,7 +123,7 @@ const seedDefaultAccounts = async () => {
         role: "admin",
         department: "Administration",
       });
-      console.log("[Seed] Default admin account seeded: admin@campus.edu (AdminPassword123!)");
+      console.log("[Seed] Default admin account initialized: admin@campus.edu");
     }
 
     const studentExists = await User.findOne({ email: "student@campus.edu" });
@@ -106,7 +136,7 @@ const seedDefaultAccounts = async () => {
         rollNo: "CS2026-042",
         department: "Computer Science",
       });
-      console.log("[Seed] Default student account seeded: student@campus.edu (StudentPassword123!)");
+      console.log("[Seed] Default student account initialized: student@campus.edu");
     }
   } catch (e) {
     console.warn("[Seed Error]", e.message);

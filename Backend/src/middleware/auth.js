@@ -9,23 +9,24 @@ const authenticate = async (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.error("[Auth] Server misconfiguration: JWT_SECRET environment variable is not defined");
+      return res.status(500).json({ message: "Internal server configuration error" });
+    }
+
     let decoded;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || "campus_ai_super_secret_jwt_key_2026");
+      decoded = jwt.verify(token, secret);
     } catch (verifyErr) {
-      // Graceful fallback to previous dev secret during key rotation
-      try {
-        decoded = jwt.verify(token, "campus_ai_super_secret_jwt_key_2026");
-      } catch (legacyErr) {
-        return res.status(401).json({ message: "Invalid or expired token", error: verifyErr.message });
-      }
+      return res.status(401).json({ message: "Invalid or expired token", error: verifyErr.message });
     }
 
-    let user = await User.findById(decoded.id).select("-password");
-    if (!user && decoded.email) {
-      user = await User.findOne({ email: decoded.email.toLowerCase() }).select("-password");
+    if (!decoded || !decoded.id) {
+      return res.status(401).json({ message: "Malformed token payload" });
     }
 
+    const user = await User.findById(decoded.id).select("-password");
     if (!user) {
       return res.status(401).json({ message: "User not found or deactivated" });
     }
@@ -56,20 +57,13 @@ const optionalAuthenticate = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.split(" ")[1];
-      let decoded;
-      try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET || "campus_ai_super_secret_jwt_key_2026");
-      } catch (verifyErr) {
-        try {
-          decoded = jwt.verify(token, "campus_ai_super_secret_jwt_key_2026");
-        } catch (e) {
-          decoded = null;
+      const secret = process.env.JWT_SECRET;
+      if (secret) {
+        const decoded = jwt.verify(token, secret);
+        if (decoded && decoded.id) {
+          const user = await User.findById(decoded.id).select("-password");
+          if (user) req.user = user;
         }
-      }
-
-      if (decoded && decoded.id) {
-        const user = await User.findById(decoded.id).select("-password");
-        if (user) req.user = user;
       }
     }
   } catch (error) {
@@ -79,3 +73,4 @@ const optionalAuthenticate = async (req, res, next) => {
 };
 
 module.exports = { authenticate, optionalAuthenticate, requireRole };
+

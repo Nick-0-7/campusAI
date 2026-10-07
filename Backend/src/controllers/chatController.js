@@ -170,18 +170,15 @@ const getHistory = async (req, res) => {
   }
 };
 
-/**
- * Clear all chat history or specific session
- */
 const clearHistory = async (req, res) => {
   try {
-    const userId = req.user?._id;
+    const userId = req.user._id;
     const { sessionId } = req.query;
 
     if (sessionId) {
       if (mongoose.isValidObjectId(sessionId)) {
-        await ChatMessage.deleteMany({ sessionId, ...(userId ? { userId } : {}) });
-        await ChatSession.deleteOne({ _id: sessionId, ...(userId ? { userId } : {}) });
+        await ChatMessage.deleteMany({ sessionId, userId });
+        await ChatSession.deleteOne({ _id: sessionId, userId });
       }
       return res.json({
         success: true,
@@ -189,10 +186,8 @@ const clearHistory = async (req, res) => {
       });
     }
 
-    if (userId) {
-      await ChatMessage.deleteMany({ userId });
-      await ChatSession.deleteMany({ userId });
-    }
+    await ChatMessage.deleteMany({ userId });
+    await ChatSession.deleteMany({ userId });
 
     return res.json({
       success: true,
@@ -210,12 +205,19 @@ const clearHistory = async (req, res) => {
 const deleteSession = async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const userId = req.user?._id;
+    const userId = req.user._id;
 
-    if (sessionId && mongoose.isValidObjectId(sessionId)) {
-      await ChatMessage.deleteMany({ sessionId, ...(userId ? { userId } : {}) });
-      await ChatSession.deleteOne({ _id: sessionId, ...(userId ? { userId } : {}) });
+    if (!sessionId || !mongoose.isValidObjectId(sessionId)) {
+      return res.status(400).json({ success: false, message: "Invalid session ID format" });
     }
+
+    const session = await ChatSession.findOne({ _id: sessionId, userId });
+    if (!session) {
+      return res.status(404).json({ success: false, message: "Session not found or access denied" });
+    }
+
+    await ChatMessage.deleteMany({ sessionId, userId });
+    await ChatSession.deleteOne({ _id: sessionId, userId });
 
     return res.json({ success: true, message: "Session deleted successfully." });
   } catch (err) {
@@ -228,10 +230,19 @@ const deleteSession = async (req, res) => {
  */
 const getSessionMessages = async (req, res) => {
   try {
-    const messages = await ChatMessage.find({
-      sessionId: req.params.sessionId,
-      ...(req.user?._id ? { userId: req.user._id } : {}),
-    }).sort({ createdAt: 1 });
+    const { sessionId } = req.params;
+    const userId = req.user._id;
+
+    if (!sessionId || !mongoose.isValidObjectId(sessionId)) {
+      return res.status(400).json({ message: "Invalid session ID format" });
+    }
+
+    const session = await ChatSession.findOne({ _id: sessionId, userId });
+    if (!session) {
+      return res.status(404).json({ message: "Session not found or access denied" });
+    }
+
+    const messages = await ChatMessage.find({ sessionId, userId }).sort({ createdAt: 1 });
     return res.json({ messages });
   } catch (err) {
     return res.status(500).json({ message: err.message });

@@ -3,9 +3,13 @@ const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
 
 const createToken = (user) => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not configured on the server");
+  }
   return jwt.sign(
     { id: user._id, role: user.role, email: user.email },
-    process.env.JWT_SECRET || "campus_ai_super_secret_jwt_key_2026",
+    secret,
     { expiresIn: "7d" }
   );
 };
@@ -13,7 +17,7 @@ const createToken = (user) => {
 const register = async (req, res) => {
   try {
     const { name, email, password, role, rollNo, department, accessToken, facultyToken, adminToken } = req.body;
-    const providedToken = accessToken || facultyToken || adminToken;
+    const providedToken = (accessToken || facultyToken || adminToken || "").trim();
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: "Name, email, and password are required" });
@@ -22,21 +26,24 @@ const register = async (req, res) => {
     const requestedRole = (role || "student").toLowerCase().trim();
     let assignedRole = "student";
 
-    // Strict security check: Faculty and Admin accounts require the valid access token
-    if (requestedRole === "faculty" || requestedRole === "admin") {
-      const requiredToken =
-        process.env.FACULTY_ACCESS_TOKEN ||
-        process.env.ADMIN_ACCESS_TOKEN ||
-        "CAMPUS_AI_ADMIN_SECURE_2026_KEY";
-
-      if (!providedToken || providedToken.trim() !== requiredToken.trim()) {
+    if (requestedRole === "admin") {
+      const requiredAdminToken = (process.env.ADMIN_ACCESS_TOKEN || "").trim();
+      if (!requiredAdminToken || !providedToken || providedToken !== requiredAdminToken) {
         return res.status(403).json({
           success: false,
-          message:
-            "Invalid or missing Access Token. Only authorized faculty and staff with the correct institutional token can create a Faculty account.",
+          message: "Invalid or missing Administrator Access Token. Administrator account creation denied.",
         });
       }
-      assignedRole = requestedRole === "admin" ? "admin" : "faculty";
+      assignedRole = "admin";
+    } else if (requestedRole === "faculty") {
+      const requiredFacultyToken = (process.env.FACULTY_ACCESS_TOKEN || "").trim();
+      if (!requiredFacultyToken || !providedToken || providedToken !== requiredFacultyToken) {
+        return res.status(403).json({
+          success: false,
+          message: "Invalid or missing Faculty Access Token. Faculty account creation denied.",
+        });
+      }
+      assignedRole = "faculty";
     } else {
       assignedRole = "student";
     }

@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { marked } from "marked";
+import DOMPurify from "dompurify";
 
 // Configure marked with GitHub-flavored markdown and soft line breaks
 marked.setOptions({
@@ -38,10 +39,11 @@ export const FormattedMessage = ({ content }) => {
     if (!content) return "";
     try {
       const cleaned = cleanAndFormatText(content);
-      return marked.parse(cleaned);
+      const rawHtml = marked.parse(cleaned);
+      return DOMPurify.sanitize(rawHtml);
     } catch (err) {
       console.warn("Markdown parse error:", err);
-      return content;
+      return DOMPurify.sanitize(content);
     }
   }, [content]);
 

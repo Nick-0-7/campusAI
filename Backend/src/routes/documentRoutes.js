@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const upload = require("../middleware/upload");
-const { optionalAuthenticate } = require("../middleware/auth");
+const { authenticate, optionalAuthenticate, requireRole } = require("../middleware/auth");
 const {
   uploadDocument,
   listDocuments,
@@ -10,30 +10,46 @@ const {
   updateDocumentVersion,
   deleteDocument,
   reprocessDocument,
+  downloadDocument,
 } = require("../controllers/documentController");
 
-// Knowledge statistics and document listing
+// Public/Read: Knowledge statistics and document listing
 router.get("/", optionalAuthenticate, listDocuments);
 router.get("/stats", optionalAuthenticate, getDocumentStats);
 router.get("/:id", optionalAuthenticate, getDocumentById);
 
-// Document upload and management routes
+// Authenticated file download
+router.get("/:id/download", authenticate, downloadDocument);
+
+// Role-protected Document management (Faculty / Admin only)
 router.post(
   "/upload",
-  optionalAuthenticate,
+  authenticate,
+  requireRole("admin", "faculty"),
   upload.single("file"),
   uploadDocument
 );
 
-router.post("/:id/reprocess", optionalAuthenticate, reprocessDocument);
+router.post(
+  "/:id/reprocess",
+  authenticate,
+  requireRole("admin", "faculty"),
+  reprocessDocument
+);
 
 router.post(
   "/:id/versions",
-  optionalAuthenticate,
+  authenticate,
+  requireRole("admin", "faculty"),
   upload.single("file"),
   updateDocumentVersion
 );
 
-router.delete("/:id", optionalAuthenticate, deleteDocument);
+router.delete(
+  "/:id",
+  authenticate,
+  requireRole("admin", "faculty"),
+  deleteDocument
+);
 
 module.exports = router;

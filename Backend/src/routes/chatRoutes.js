@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { optionalAuthenticate } = require("../middleware/auth");
+const { authenticate, optionalAuthenticate } = require("../middleware/auth");
 const {
   handleChatQuery,
   getChatSessions,
@@ -10,11 +10,14 @@ const {
   deleteSession,
 } = require("../controllers/chatController");
 
+// Public query endpoint (optional login for history saving)
 router.post("/", optionalAuthenticate, handleChatQuery);
-router.get("/sessions", optionalAuthenticate, getChatSessions);
-router.get("/sessions/:sessionId", optionalAuthenticate, getSessionMessages);
-router.get("/history", optionalAuthenticate, getHistory);
-router.delete("/history", optionalAuthenticate, clearHistory);
-router.delete("/sessions/:sessionId", optionalAuthenticate, deleteSession);
+
+// Protected user-specific conversation history and session management
+router.get("/sessions", authenticate, getChatSessions);
+router.get("/sessions/:sessionId", authenticate, getSessionMessages);
+router.get("/history", authenticate, getHistory);
+router.delete("/history", authenticate, clearHistory);
+router.delete("/sessions/:sessionId", authenticate, deleteSession);
 
 module.exports = router;
