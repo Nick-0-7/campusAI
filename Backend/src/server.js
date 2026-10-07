@@ -45,11 +45,29 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/feedback", feedbackRoutes);
 
 // Health check endpoint
-app.get("/api/health", (req, res) => {
+app.get("/api/health", async (req, res) => {
+  let geminiTest = "not_tested";
+  if (req.query.testGemini === "true") {
+    try {
+      const { GoogleGenerativeAI } = require("@google/generative-ai");
+      const key = process.env.GEMINI_API_KEY || "";
+      const genAI = new GoogleGenerativeAI(key.trim());
+      const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const testRes = await model.generateContent("hello");
+      geminiTest = "OK: " + testRes.response.text().trim();
+    } catch (e) {
+      geminiTest = "ERROR: " + e.message;
+    }
+  }
+
   res.json({
     status: "ok",
     service: "Saarthi AI Knowledge Copilot",
     geminiConfigured: !!(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 10),
+    geminiKeyPrefix: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.slice(0, 6) + "..." : "missing",
+    geminiModelEnv: process.env.GEMINI_MODEL || "not_set",
+    geminiTest,
     timestamp: new Date().toISOString(),
   });
 });
